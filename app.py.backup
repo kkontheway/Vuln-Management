@@ -1,0 +1,1049 @@
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+from mysql.connector import Error
+import mysql.connector
+import json
+import os
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+import logging
+import subprocess
+import threading
+import re
+import csv
+import io
+from servicenow_client import get_servicenow_client, ServiceNowClient
+
+# 加载环境变量
+load_dotenv()
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
+CORS(app)
+
+# 数据库配置
+DB_CONFIG = {
+    'host': os.getenv("DB_HOST"),
+    'port': int(os.getenv("DB_PORT", 3306)),
+    'database': os.getenv("DB_NAME"),
+    'user': os.getenv("DB_USER"),
+    'password': os.getenv("DB_PASSWORD")
+}
+
+def get_db_connection():
+    """创建数据库连接"""
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        if connection.is_connected():
+            return connection
+    except Error as e:
+        logger.error(f"连接数据库时出错: {e}")
+        return None
+
+@app.route('/api/vulnerabilities', methods=['GET'])
+def get_vulnerabilities():
+    """获取漏洞列表，支持分页和过滤"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': '数据库连接失败'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取查询参数
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 50))
+        offset = (page - 1) * per_page
+        
+        # 获取过滤条件
+        filters = {}
+        filter_fields = [
+            'cve_id', 'device_name', 'os_platform', 'os_version',
+            'software_vendor', 'software_name', 'vulnerability_severity_level',
+            'status', 'exploitability_level', 'rbac_group_name'
+        ]
+        
+        for field in filter_fields:
+            value = request.args.get(field)
+            if value:
+                filters[field] = value
+        
+        # 构建WHERE子句
+        where_clauses = []
+        params = []
+        
+        # 支持按ID精确查询
+        vuln_id = request.args.get('id')
+        if vuln_id:
+            where_clauses.append("id = %s")
+            params.append(vuln_id)
+        
+        for field, value in filters.items():
+            where_clauses.append(f"{field} LIKE %s")
+            params.append(f"%{value}%")
+        
+        # CVSS分数范围过滤
+        cvss_min = request.args.get('cvss_min')
+        cvss_max = request.args.get('cvss_max')
+        if cvss_min:
+            where_clauses.append("cvss_score >= %s")
+            params.append(float(cvss_min))
+        if cvss_max:
+            where_clauses.append("cvss_score <= %s")
+            params.append(float(cvss_max))
+        
+        # 日期范围过滤
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        if date_from:
+            where_clauses.append("last_seen_timestamp >= %s")
+            params.append(date_from)
+        if date_to:
+            where_clauses.append("last_seen_timestamp <= %s")
+            params.append(date_to)
+        
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        
+        # 获取总数
+        count_query = f"SELECT COUNT(*) as total FROM vulnerability_info WHERE {where_sql}"
+        cursor.execute(count_query, params)
+        total = cursor.fetchone()['total']
+        
+        # 获取数据
+        query = f"""
+        SELECT 
+            id, cve_id, disk_paths, registry_paths, device_id, rbac_group_name,
+            device_name, os_platform, os_version, os_architecture,
+            software_vendor, software_name, software_version,
+            vulnerability_severity_level, recommended_security_update,
+            recommended_security_update_id, recommended_security_update_url,
+            last_seen_timestamp, first_seen_timestamp, exploitability_level,
+            recommendation_reference, security_update_available,
+            event_timestamp, status, cvss_score, last_updated
+        FROM vulnerability_info
+        WHERE {where_sql}
+        ORDER BY cvss_score DESC, last_seen_timestamp DESC
+        LIMIT %s OFFSET %s
+        """
+        
+        params.extend([per_page, offset])
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        
+        # 处理JSON字段
+        for row in results:
+            if row['disk_paths']:
+                try:
+                    row['disk_paths'] = json.loads(row['disk_paths'])
+                except:
+                    row['disk_paths'] = []
+            if row['registry_paths']:
+                try:
+                    row['registry_paths'] = json.loads(row['registry_paths'])
+                except:
+                    row['registry_paths'] = []
+            
+            # 转换日期格式
+            for date_field in ['last_seen_timestamp', 'first_seen_timestamp', 
+                              'event_timestamp', 'last_updated']:
+                if row[date_field]:
+                    if isinstance(row[date_field], datetime):
+                        row[date_field] = row[date_field].isoformat()
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'data': results,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page
+        })
+        
+    except Exception as e:
+        logger.error(f"获取漏洞数据时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/statistics', methods=['GET'])
+def get_statistics():
+    """获取漏洞统计信息，用于饼图"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': '数据库连接失败'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 按严重程度统计（按CVE ID去重）
+        severity_query = """
+        SELECT 
+            vulnerability_severity_level, 
+            COUNT(DISTINCT cve_id) as count
+        FROM vulnerability_info
+        WHERE vulnerability_severity_level IS NOT NULL 
+          AND vulnerability_severity_level != ''
+          AND cve_id IS NOT NULL
+          AND cve_id != ''
+        GROUP BY vulnerability_severity_level
+        """
+        cursor.execute(severity_query)
+        severity_stats = cursor.fetchall()
+        
+        # 按状态统计
+        status_query = """
+        SELECT status, COUNT(*) as count
+        FROM vulnerability_info
+        WHERE status IS NOT NULL
+        GROUP BY status
+        """
+        cursor.execute(status_query)
+        status_stats = cursor.fetchall()
+        
+        # 按操作系统平台统计（按CVE ID去重）
+        platform_query = """
+        SELECT 
+            os_platform, 
+            COUNT(DISTINCT cve_id) as count
+        FROM vulnerability_info
+        WHERE os_platform IS NOT NULL 
+          AND os_platform != ''
+          AND cve_id IS NOT NULL
+          AND cve_id != ''
+        GROUP BY os_platform
+        LIMIT 10
+        """
+        cursor.execute(platform_query)
+        platform_stats = cursor.fetchall()
+        
+        # 按软件供应商统计
+        vendor_query = """
+        SELECT software_vendor, COUNT(*) as count
+        FROM vulnerability_info
+        WHERE software_vendor IS NOT NULL
+        GROUP BY software_vendor
+        ORDER BY count DESC
+        LIMIT 10
+        """
+        cursor.execute(vendor_query)
+        vendor_stats = cursor.fetchall()
+        
+        # 按可利用性级别统计
+        exploitability_query = """
+        SELECT exploitability_level, COUNT(*) as count
+        FROM vulnerability_info
+        WHERE exploitability_level IS NOT NULL
+        GROUP BY exploitability_level
+        """
+        cursor.execute(exploitability_query)
+        exploitability_stats = cursor.fetchall()
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'severity': severity_stats,
+            'status': status_stats,
+            'platform': platform_stats,
+            'vendor': vendor_stats,
+            'exploitability': exploitability_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"获取统计信息时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/unique-cve-count', methods=['GET'])
+def get_unique_cve_count():
+    """获取去重后的CVE ID数量"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取去重后的CVE ID数量
+        query = """
+        SELECT COUNT(DISTINCT cve_id) as unique_count
+        FROM vulnerability_info
+        WHERE cve_id IS NOT NULL AND cve_id != ''
+        """
+        cursor.execute(query)
+        result = cursor.fetchone()
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'unique_cve_count': result['unique_count'] if result else 0
+        })
+        
+    except Exception as e:
+        logger.error(f"获取去重CVE数量时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/severity-counts', methods=['GET'])
+def get_severity_counts():
+    """获取按严重程度分类的数量"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取按严重程度分类的数量（去重CVE ID）
+        query = """
+        SELECT 
+            vulnerability_severity_level,
+            COUNT(DISTINCT cve_id) as count
+        FROM vulnerability_info
+        WHERE vulnerability_severity_level IS NOT NULL 
+          AND vulnerability_severity_level != ''
+          AND cve_id IS NOT NULL
+          AND cve_id != ''
+        GROUP BY vulnerability_severity_level
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        
+        # 转换为字典格式，方便前端使用
+        severity_counts = {}
+        for row in results:
+            severity_lower = row['vulnerability_severity_level'].lower()
+            # 标准化严重程度名称
+            if 'critical' in severity_lower:
+                severity_counts['critical'] = row['count']
+            elif 'high' in severity_lower:
+                severity_counts['high'] = row['count']
+            elif 'medium' in severity_lower:
+                severity_counts['medium'] = row['count']
+            elif 'low' in severity_lower:
+                severity_counts['low'] = row['count']
+            else:
+                # 如果无法匹配，使用原始值作为key
+                severity_counts[row['vulnerability_severity_level']] = row['count']
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'critical': severity_counts.get('critical', 0),
+            'high': severity_counts.get('high', 0),
+            'medium': severity_counts.get('medium', 0),
+            'low': severity_counts.get('low', 0),
+            'other': sum(v for k, v in severity_counts.items() if k not in ['critical', 'high', 'medium', 'low'])
+        })
+        
+    except Exception as e:
+        logger.error(f"获取严重程度统计时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/filter-options', methods=['GET'])
+def get_filter_options():
+    """获取过滤器的选项列表"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': '数据库连接失败'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取各个字段的唯一值
+        options = {}
+        
+        fields = [
+            'vulnerability_severity_level',
+            'status',
+            'os_platform',
+            'exploitability_level',
+            'rbac_group_name'
+        ]
+        
+        for field in fields:
+            query = f"""
+            SELECT DISTINCT {field} as value
+            FROM vulnerability_info
+            WHERE {field} IS NOT NULL AND {field} != ''
+            ORDER BY {field}
+            LIMIT 100
+            """
+            cursor.execute(query)
+            options[field] = [row['value'] for row in cursor.fetchall()]
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify(options)
+        
+    except Exception as e:
+        logger.error(f"获取过滤选项时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sync-status', methods=['GET'])
+def get_sync_status():
+    """获取同步状态和最后同步时间"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取最后同步时间（优先获取full，其次delta）
+        query = """
+        SELECT last_sync_time, sync_type
+        FROM sync_state
+        ORDER BY 
+            CASE sync_type 
+                WHEN 'full' THEN 1 
+                WHEN 'delta' THEN 2 
+                ELSE 3 
+            END,
+            id DESC
+        LIMIT 1
+        """
+        cursor.execute(query)
+        result = cursor.fetchone()
+        
+        cursor.close()
+        connection.close()
+        
+        if result:
+            return jsonify({
+                'last_sync_time': result['last_sync_time'].isoformat() if result['last_sync_time'] else None,
+                'sync_type': result['sync_type']
+            })
+        else:
+            return jsonify({
+                'last_sync_time': None,
+                'sync_type': None
+            })
+        
+    except Exception as e:
+        logger.error(f"获取同步状态时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# 同步任务状态
+sync_in_progress = False
+
+@app.route('/api/sync', methods=['POST'])
+def trigger_sync():
+    """触发数据同步"""
+    global sync_in_progress
+    
+    try:
+        # 检查是否已有同步任务在运行
+        if sync_in_progress:
+            return jsonify({
+                'error': 'Sync is already in progress. Please wait for it to complete.'
+            }), 400
+        
+        # 在后台线程中运行同步
+        def run_sync():
+            global sync_in_progress
+            try:
+                sync_in_progress = True
+                logger.info("Starting data sync in background thread...")
+                
+                # 使用subprocess调用defender.py
+                result = subprocess.run(
+                    ['python3', 'defender.py'],
+                    capture_output=True,
+                    text=True,
+                    timeout=3600  # 1小时超时
+                )
+                
+                if result.returncode == 0:
+                    logger.info("Data sync completed successfully")
+                else:
+                    logger.error(f"Data sync failed: {result.stderr}")
+                    
+            except subprocess.TimeoutExpired:
+                logger.error("Data sync timed out")
+            except Exception as e:
+                logger.error(f"同步执行失败: {e}")
+            finally:
+                sync_in_progress = False
+        
+        # 启动后台线程
+        sync_thread = threading.Thread(target=run_sync, daemon=True)
+        sync_thread.start()
+        
+        return jsonify({
+            'status': 'started',
+            'message': 'Data sync started in background'
+        })
+        
+    except Exception as e:
+        logger.error(f"触发同步时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/create-initial-snapshot', methods=['POST'])
+def create_initial_snapshot():
+    """创建初始快照"""
+    connection = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        # 确保数据库表已初始化
+        from defender import initialize_database, create_initial_snapshot
+        initialize_database(connection)
+        
+        # 创建初始快照
+        snapshot_id = create_initial_snapshot(connection)
+        
+        if snapshot_id:
+            return jsonify({
+                'status': 'success',
+                'message': 'Initial snapshot created successfully',
+                'snapshot_id': snapshot_id
+            })
+        else:
+            return jsonify({'error': 'Failed to create initial snapshot. Check server logs for details.'}), 500
+        
+    except ImportError as e:
+        logger.error(f"导入defender模块失败: {e}")
+        return jsonify({'error': f'Import error: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"创建初始快照时出错: {e}", exc_info=True)
+        if connection:
+            connection.rollback()
+        return jsonify({'error': f'Error creating snapshot: {str(e)}'}), 500
+    finally:
+        if connection and connection.is_connected():
+            connection.close()
+
+@app.route('/api/snapshots', methods=['GET'])
+def get_snapshots():
+    """获取历史快照列表"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取快照列表
+        query = """
+        SELECT 
+            id, snapshot_time, total_vulnerabilities, unique_cve_count,
+            critical_count, high_count, medium_count, low_count,
+            fixed_count, active_count, total_devices_affected,
+            created_at
+        FROM vulnerability_snapshots
+        ORDER BY snapshot_time DESC
+        LIMIT 100
+        """
+        cursor.execute(query)
+        snapshots = cursor.fetchall()
+        
+        # 转换日期格式
+        for snapshot in snapshots:
+            for date_field in ['snapshot_time', 'created_at']:
+                if snapshot[date_field]:
+                    if isinstance(snapshot[date_field], datetime):
+                        snapshot[date_field] = snapshot[date_field].isoformat()
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'snapshots': snapshots,
+            'total': len(snapshots)
+        })
+        
+    except Exception as e:
+        logger.error(f"获取快照列表时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/snapshots/<int:snapshot_id>/details', methods=['GET'])
+def get_snapshot_details(snapshot_id):
+    """获取特定快照的详细信息"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取快照基本信息
+        cursor.execute("""
+            SELECT * FROM vulnerability_snapshots WHERE id = %s
+        """, (snapshot_id,))
+        snapshot = cursor.fetchone()
+        
+        if not snapshot:
+            return jsonify({'error': 'Snapshot not found'}), 404
+        
+        # 转换日期格式
+        for date_field in ['snapshot_time', 'created_at']:
+            if snapshot[date_field] and isinstance(snapshot[date_field], datetime):
+                snapshot[date_field] = snapshot[date_field].isoformat()
+        
+        # 获取CVE统计
+        cursor.execute("""
+            SELECT * FROM cve_snapshots 
+            WHERE snapshot_id = %s
+            ORDER BY device_count DESC
+            LIMIT 1000
+        """, (snapshot_id,))
+        cve_snapshots = cursor.fetchall()
+        
+        # 转换日期格式
+        for cve in cve_snapshots:
+            for date_field in ['first_seen', 'last_seen']:
+                if cve[date_field] and isinstance(cve[date_field], datetime):
+                    cve[date_field] = cve[date_field].isoformat()
+        
+        # 获取设备变化统计
+        cursor.execute("""
+            SELECT 
+                change_type,
+                COUNT(*) as count
+            FROM cve_device_changes
+            WHERE snapshot_id = %s
+            GROUP BY change_type
+        """, (snapshot_id,))
+        change_stats = cursor.fetchall()
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'snapshot': snapshot,
+            'cve_snapshots': cve_snapshots,
+            'change_stats': change_stats
+        })
+        
+    except Exception as e:
+        logger.error(f"获取快照详情时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cve-history/<cve_id>', methods=['GET'])
+def get_cve_history(cve_id):
+    """获取特定CVE的历史变化"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取该CVE在所有快照中的统计
+        cursor.execute("""
+            SELECT 
+                cs.*,
+                vs.snapshot_time
+            FROM cve_snapshots cs
+            JOIN vulnerability_snapshots vs ON cs.snapshot_id = vs.id
+            WHERE cs.cve_id = %s
+            ORDER BY vs.snapshot_time ASC
+        """, (cve_id,))
+        cve_history = cursor.fetchall()
+        
+        # 转换日期格式
+        for record in cve_history:
+            for date_field in ['snapshot_time', 'first_seen', 'last_seen']:
+                if record[date_field] and isinstance(record[date_field], datetime):
+                    record[date_field] = record[date_field].isoformat()
+        
+        # 获取该CVE的设备变化历史
+        cursor.execute("""
+            SELECT 
+                cdc.*,
+                vs.snapshot_time
+            FROM cve_device_changes cdc
+            JOIN vulnerability_snapshots vs ON cdc.snapshot_id = vs.id
+            WHERE cdc.cve_id = %s
+            ORDER BY vs.snapshot_time DESC, cdc.change_time DESC
+            LIMIT 500
+        """, (cve_id,))
+        device_changes = cursor.fetchall()
+        
+        # 转换日期格式
+        for change in device_changes:
+            for date_field in ['snapshot_time', 'change_time']:
+                if change[date_field] and isinstance(change[date_field], datetime):
+                    change[date_field] = change[date_field].isoformat()
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'cve_id': cve_id,
+            'history': cve_history,
+            'device_changes': device_changes
+        })
+        
+    except Exception as e:
+        logger.error(f"获取CVE历史时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/snapshots/trend', methods=['GET'])
+def get_snapshots_trend():
+    """获取快照趋势数据，用于线状图展示"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # 获取所有快照数据
+        query = """
+        SELECT 
+            DATE(snapshot_time) as snapshot_date,
+            snapshot_time,
+            critical_count,
+            high_count,
+            medium_count
+        FROM vulnerability_snapshots
+        ORDER BY snapshot_time ASC
+        """
+        cursor.execute(query)
+        all_snapshots = cursor.fetchall()
+        
+        # 按天聚合：如果同一天有多个快照，取该天最后一个快照的数据
+        daily_data = {}
+        for snapshot in all_snapshots:
+            # 确保date_key是字符串格式
+            date_key = snapshot['snapshot_date']
+            if hasattr(date_key, 'isoformat'):
+                date_key = date_key.isoformat()
+            else:
+                date_key = str(date_key)
+            
+            # 如果该天已有数据，比较时间，保留最新的
+            if date_key not in daily_data:
+                daily_data[date_key] = snapshot
+            else:
+                # 比较snapshot_time，保留更新的
+                current_time = snapshot['snapshot_time']
+                existing_time = daily_data[date_key]['snapshot_time']
+                # 确保都是datetime对象进行比较
+                if isinstance(current_time, str):
+                    try:
+                        current_time = datetime.datetime.fromisoformat(current_time.replace('Z', '+00:00'))
+                    except:
+                        current_time = datetime.datetime.strptime(current_time.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                if isinstance(existing_time, str):
+                    try:
+                        existing_time = datetime.datetime.fromisoformat(existing_time.replace('Z', '+00:00'))
+                    except:
+                        existing_time = datetime.datetime.strptime(existing_time.split('.')[0], '%Y-%m-%d %H:%M:%S')
+                
+                if current_time > existing_time:
+                    daily_data[date_key] = snapshot
+        
+        # 转换为列表并按日期排序
+        trend_data = []
+        for date_key in sorted(daily_data.keys()):
+            snapshot = daily_data[date_key]
+            # 转换日期格式
+            if snapshot['snapshot_time']:
+                if isinstance(snapshot['snapshot_time'], datetime):
+                    snapshot['snapshot_time'] = snapshot['snapshot_time'].isoformat()
+                snapshot['snapshot_date'] = snapshot['snapshot_date'].isoformat() if hasattr(snapshot['snapshot_date'], 'isoformat') else str(snapshot['snapshot_date'])
+            trend_data.append({
+                'date': snapshot['snapshot_date'],
+                'snapshot_time': snapshot['snapshot_time'],
+                'critical': snapshot['critical_count'] or 0,
+                'high': snapshot['high_count'] or 0,
+                'medium': snapshot['medium_count'] or 0
+            })
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'trend': trend_data,
+            'total': len(trend_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"获取快照趋势数据时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """AI聊天接口（预留，可以集成OpenAI或其他AI服务）"""
+    try:
+        data = request.json
+        message = data.get('message', '')
+        
+        # 这里可以集成AI服务
+        # 目前返回一个简单的响应
+        response = {
+            'message': f'Received your message: {message}. AI functionality to be integrated.',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"聊天接口出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ServiceNow API Routes
+@app.route('/api/servicenow/tickets', methods=['GET', 'POST'])
+def servicenow_tickets():
+    """ServiceNow tickets endpoint - GET list or POST create"""
+    try:
+        client = get_servicenow_client()
+        if not client:
+            return jsonify({'error': 'ServiceNow is not configured. Please configure it in settings.'}), 400
+        
+        if request.method == 'GET':
+            # Get tickets list
+            table = request.args.get('table', 'incident')
+            query = request.args.get('query')
+            limit = int(request.args.get('limit', 100))
+            offset = int(request.args.get('offset', 0))
+            
+            tickets = client.get_tickets(
+                table=table,
+                sysparm_query=query,
+                sysparm_limit=limit,
+                sysparm_offset=offset
+            )
+            
+            return jsonify({
+                'tickets': tickets,
+                'total': len(tickets)
+            })
+        
+        elif request.method == 'POST':
+            # Create ticket
+            data = request.json
+            table = data.get('table', 'incident')
+            
+            # Extract ticket fields
+            ticket_data = {
+                'short_description': data.get('short_description', ''),
+                'description': data.get('description', ''),
+                'category': data.get('category', ''),
+                'priority': data.get('priority', '3'),
+                'urgency': data.get('urgency', '3'),
+                'impact': data.get('impact', '3'),
+            }
+            
+            # Remove empty fields
+            ticket_data = {k: v for k, v in ticket_data.items() if v}
+            
+            ticket = client.create_ticket(table=table, **ticket_data)
+            
+            return jsonify({
+                'ticket': ticket,
+                'ticket_number': ticket.get('number', ticket.get('sys_id')),
+                'sys_id': ticket.get('sys_id')
+            }), 201
+            
+    except Exception as e:
+        logger.error(f"ServiceNow tickets error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/servicenow/tickets/<ticket_id>', methods=['GET'])
+def servicenow_ticket_detail(ticket_id):
+    """Get ServiceNow ticket detail"""
+    try:
+        client = get_servicenow_client()
+        if not client:
+            return jsonify({'error': 'ServiceNow is not configured'}), 400
+        
+        table = request.args.get('table', 'incident')
+        ticket = client.get_ticket(table=table, sys_id=ticket_id)
+        
+        return jsonify({'ticket': ticket})
+        
+    except Exception as e:
+        logger.error(f"ServiceNow ticket detail error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/servicenow/tickets/<ticket_id>/notes', methods=['GET', 'POST'])
+def servicenow_ticket_notes(ticket_id):
+    """Get or add notes for a ServiceNow ticket"""
+    try:
+        client = get_servicenow_client()
+        if not client:
+            return jsonify({'error': 'ServiceNow is not configured'}), 400
+        
+        table = request.args.get('table', 'incident') if request.method == 'GET' else request.json.get('table', 'incident')
+        
+        if request.method == 'GET':
+            # Get notes
+            notes = client.get_ticket_notes(table=table, sys_id=ticket_id)
+            return jsonify({
+                'notes': notes,
+                'total': len(notes)
+            })
+        
+        elif request.method == 'POST':
+            # Add note
+            data = request.json
+            note_text = data.get('note', '')
+            
+            if not note_text:
+                return jsonify({'error': 'Note text is required'}), 400
+            
+            note = client.add_ticket_note(table=table, sys_id=ticket_id, note_text=note_text)
+            return jsonify({
+                'note': note,
+                'message': 'Note added successfully'
+            }), 201
+            
+    except Exception as e:
+        logger.error(f"ServiceNow notes error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/servicenow/test-connection', methods=['POST'])
+def servicenow_test_connection():
+    """Test ServiceNow connection"""
+    try:
+        data = request.json
+        instance_url = data.get('instance_url', '').rstrip('/')
+        username = data.get('username', '')
+        password = data.get('password', '')
+        
+        if not instance_url or not username or not password:
+            return jsonify({'error': 'Instance URL, username, and password are required'}), 400
+        
+        client = ServiceNowClient(
+            instance_url=instance_url,
+            username=username,
+            password=password
+        )
+        
+        if client.test_connection():
+            return jsonify({'success': True, 'message': 'Connection successful'})
+        else:
+            return jsonify({'success': False, 'error': 'Connection test failed'}), 400
+            
+    except Exception as e:
+        logger.error(f"ServiceNow connection test error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Threat Intelligence API Routes
+@app.route('/api/threat-intelligence/extract-ip', methods=['POST'])
+def extract_ip_addresses():
+    """Extract IP addresses from text and generate CSV file"""
+    try:
+        data = request.json
+        text = data.get('text', '')
+        
+        if not text:
+            return jsonify({'error': 'Text is required'}), 400
+        
+        # Extract IP addresses using regex (IPv4)
+        # Pattern 1: Normal IP format (192.168.1.1)
+        normal_ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+        # Pattern 2: Obfuscated IP format with brackets (192[.]168[.]1[.]1)
+        obfuscated_ip_pattern = r'\b(?:\d{1,3})\[\.\](?:\d{1,3})\[\.\](?:\d{1,3})\[\.\](?:\d{1,3})\b'
+        
+        # Find all matches
+        normal_ips = re.findall(normal_ip_pattern, text)
+        obfuscated_ips = re.findall(obfuscated_ip_pattern, text)
+        
+        # Clean obfuscated IPs by removing brackets
+        cleaned_obfuscated_ips = []
+        for ip in obfuscated_ips:
+            cleaned_ip = ip.replace('[.]', '.')
+            cleaned_obfuscated_ips.append(cleaned_ip)
+        
+        # Combine all IPs
+        all_ips = normal_ips + cleaned_obfuscated_ips
+        
+        # Validate and filter IP addresses
+        valid_ips = []
+        for ip in all_ips:
+            parts = ip.split('.')
+            if len(parts) == 4 and all(0 <= int(part) <= 255 for part in parts):
+                # Remove duplicates while preserving order
+                if ip not in valid_ips:
+                    valid_ips.append(ip)
+        
+        if not valid_ips:
+            return jsonify({
+                'ips': [],
+                'csv': None,
+                'message': 'No valid IP addresses found'
+            })
+        
+        # Generate CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'IndicatorType',
+            'IndicatorValue',
+            'ExpirationTime',
+            'Action',
+            'Severity',
+            'Title',
+            'description',
+            'recommendedActions',
+            'RbacGroups',
+            'Category',
+            'MitreTechniques',
+            'GenerateAlert'
+        ])
+        
+        # Write data rows
+        for ip in valid_ips:
+            writer.writerow([
+                'IPAddress',  # IndicatorType
+                ip,  # IndicatorValue
+                '',  # ExpirationTime
+                'Block',  # Action
+                'Low',  # Severity
+                'RecordFuture MaliciousIPAddress',  # Title
+                'RecordFuture MaliciousIPAddress',  # description
+                '',  # recommendedActions
+                '',  # RbacGroups
+                'SuspiciousActivity',  # Category
+                '',  # MitreTechniques
+                'True'  # GenerateAlert
+            ])
+        
+        csv_content = output.getvalue()
+        output.close()
+        
+        return jsonify({
+            'ips': valid_ips,
+            'csv': csv_content,
+            'count': len(valid_ips)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error extracting IP addresses: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Serve React app for all routes except API routes (must be last)
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react_app(path):
+    """Serve React application for all non-API routes"""
+    if path.startswith('api/'):
+        # This shouldn't happen as API routes are defined above, but just in case
+        return jsonify({'error': 'Not found'}), 404
+    
+    # Try to serve static files first
+    try:
+        return send_from_directory('frontend/dist', path)
+    except:
+        # If file doesn't exist, serve index.html (for React Router)
+        return send_from_directory('frontend/dist', 'index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)
+
