@@ -383,17 +383,10 @@ code {
 <tbody>
 <tr>
 <td><code>vulnerabilities</code></td>
-<td><code>cve_id</code>, 设备/软件字段, <code>cvss_score</code>, <code>status</code>, <code>metasploit_detected</code>, <code>nuclei_detected</code>, <code>recordfuture_detected</code>, <code>last_synced</code> 等</td>
-<td><code>app/integrations/defender/repository.save_vulnerabilities</code>（全量表切换），以及威胁情报标记脚本</td>
+<td><code>cve_id</code>, 设备/软件字段, <code>cvss_score</code>, <code>status</code>, <code>cve_epss</code>, <code>metasploit_detected</code>, <code>nuclei_detected</code>, <code>recordfuture_detected</code>, <code>last_synced</code> 等</td>
+<td><code>app/integrations/defender/repository.save_vulnerabilities</code>（全量表切换）、威胁情报标记脚本、DuckDB enrichment（写入 <code>cve_epss</code>）</td>
 <td><code>/api/vulnerabilities</code>（表格）、<code>/api/statistics</code>、<code>/api/filter-options</code>、推荐和报表接口</td>
-<td>同步时整表替换；Threat intel 标记为布尔列（默认 <code>FALSE</code>）。</td>
-</tr>
-<tr>
-<td><code>defender_vulnerability_catalog</code></td>
-<td><code>cve_id</code>, <code>name</code>, <code>description</code>, <code>severity</code>, <code>epss</code> 等</td>
-<td><code>sync_vulnerability_catalog</code>（调用 Defender catalog API）</td>
-<td><code>GET /api/vulnerability-catalog/&lt;cve&gt;</code>（供 <code>VulnerabilityDetailDialog</code> 展示）</td>
-<td>不影响主表数量，但补充描述/EPS S。</td>
+<td>同步时整表替换；离线 EPS S enrichment 直接作用于此表。</td>
 </tr>
 <tr>
 <td><code>rapid_vulnerabilities</code></td>
@@ -431,6 +424,13 @@ code {
 <td>快照生成依赖主表最新数据。</td>
 </tr>
 <tr>
+<td><code>sync_sources registry</code></td>
+<td><code>key</code>, <code>name</code>, <code>description</code>, <code>default_enabled</code>, <code>order</code></td>
+<td><code>app/services/sync_sources/registry.py</code>（声明各同步模块与 runner）</td>
+<td>Header Sync 弹窗、<code>/api/sync-sources</code>、<code>sync_service</code> orchestrator</td>
+<td>新增数据源只需在此注册；前端直接复用描述。</td>
+</tr>
+<tr>
 <td>统计缓存 (<code>stats:overview</code>)</td>
 <td>Chart 数据</td>
 <td><code>vulnerability_service.get_statistics</code>（缓存 300 秒）</td>
@@ -440,31 +440,36 @@ code {
 </tbody>
 </table>
 <h3 id="%E6%95%B0%E6%8D%AE%E5%85%B3%E7%B3%BBascii-%E7%95%A5%E5%9B%BE">数据关系（ASCII 略图）</h3>
-<pre class="hljs"><code><div>Defender API  --&gt; vulnerabilities  --&gt; /api/vulnerabilities --&gt; 前端表格
-                |                     \-&gt; statistics cache    --&gt; Dashboard/Charts
-                |                     \-&gt; snapshots          --&gt; 趋势/报告
-                +--&gt; defender_vulnerability_catalog --&gt; 明细弹窗
-Rapid7/Nuclei feeds --&gt; rapid/nuclei tables --&gt; detection flags (metasploit/nuclei)
-RecordFuture 工具 --&gt; recordfuture_indicators --&gt; detection flag (recordfuture)
+<pre class="hljs"><code><div>                +--&gt; vulnerabilities  --&gt; /api/vulnerabilities --&gt; 前端表格
+                |                     \-&gt; statistics cache    --&gt; Dashboard
+Defender API ---+                     \-&gt; snapshots          --&gt; 趋势/报告
+DuckDB EPSS -----^
+Sync Modal (/api/sync-sources)
+        |
+        v
+sync_service orchestrator --&gt; [defender_vulnerabilities] --&gt; vulnerabilities/snapshots/sync_state
+                           --&gt; [threat_feeds]            --&gt; rapid/nuclei tables &amp; detection flags
+                           --&gt; [recordfuture_flags]      --&gt; recordfuture_detected
+Rapid7/Nuclei feeds ----------------------------------------------^
+RecordFuture 工具 --&gt; recordfuture_indicators ---------------------+
 </div></code></pre>
 <h2 id="2-%E6%95%B0%E6%8D%AE%E6%9B%B4%E6%96%B0%E9%93%BE%E8%B7%AF">2. 数据更新链路</h2>
-<h3 id="21-microsoft-defender-%E5%85%A8%E9%87%8F%E5%90%8C%E6%AD%A5">2.1 Microsoft Defender 全量同步</h3>
+<h3 id="21-microsoft-defender-%E5%85%A8%E9%87%8F%E5%90%8C%E6%AD%A5">2.1 Orchestrator 式同步</h3>
 <ol>
-<li><strong>触发</strong>：前端 Header 中的 Sync 按钮调用 <code>apiService.triggerSync()</code> → <code>/api/sync</code>（<code>app/routes/sync.py</code>），最终 <code>app/services/sync_service.trigger_sync</code> 在后台线程执行命令 <code>python3 defender.py</code>。</li>
-<li><strong>步骤</strong>（<code>app/integrations/defender/sync.perform_full_sync</code>）：
+<li><strong>触发</strong>：Header Sync 按钮弹出数据源多选框（取自 <code>/api/sync-sources</code>），用户勾选后才会调用 <code>/api/sync</code>。</li>
+<li><strong>orchestrator 流程</strong>：<code>app/services/sync_service</code> 根据 registry 顺序执行被勾选的 runner，并在 <code>sync_progress.sources</code> 中记录每个模块的 <code>pending → running → success/error</code>。</li>
+<li><strong>核心 runner（当前版本）</strong>：
 <ul>
-<li><code>sync_device_vulnerabilities_full</code>: 调 <code>get_defender_service().fetch_device_vulnerabilities()</code>，写入新临时表并切换至 <code>vulnerabilities</code>（确保一致性）。</li>
-<li><code>sync_vulnerability_catalog</code>: 拉取 <code>fetch_vulnerability_catalog()</code>，覆盖 <code>defender_vulnerability_catalog</code>。</li>
-<li><code>record_snapshot</code>: 基于最新主表生成 <code>vulnerability_snapshots</code> + <code>cve_device_snapshots</code>，并写 <code>sync_state</code>。</li>
-<li>日志落入 <code>defender_api.log</code>，遇错会中止并在 Sync 进度里显示 <code>error</code>。</li>
+<li><code>defender_vulnerabilities</code>：调用 <code>perform_full_sync</code>，写入 <code>vulnerabilities</code>、<code>sync_state</code>、<code>vulnerability_snapshots</code>。</li>
+<li><code>threat_feeds</code>：执行 <code>sync_threat_sources</code>，刷新 Rapid7/Nuclei feed 以及相关检测标记。</li>
+<li><code>recordfuture_flags</code>：执行 <code>rebuild_detection_flags</code>，根据 <code>recordfuture_indicators</code> 重置 <code>recordfuture_detected</code>。</li>
 </ul>
 </li>
-<li><strong>输出</strong>：<code>vulnerabilities</code>、<code>defender_vulnerability_catalog</code>、<code>sync_state</code>、快照表都会刷新。</li>
-<li><strong>未覆盖</strong>：RecordFuture、ServiceNow、AI/推荐、Threat Table mock 数据不会随主同步改变；<code>stats:overview</code> 缓存需等 5 分钟或手动清理。</li>
+<li><strong>未纳入 orchestrator 的内容</strong>：RecordFuture 指标录入、ServiceNow/AI/Recommendation、DuckDB EPS S enrichment、Redis <code>stats:overview</code> 缓存（需 TTL 或手动清理）。</li>
 </ol>
 <h3 id="22-threat-intel-feed-%E5%88%B7%E6%96%B0rapidnuclei">2.2 Threat Intel Feed 刷新（Rapid/Nuclei）</h3>
 <ul>
-<li><strong>触发</strong>：当 <code>defender.py</code> 成功返回后，<code>sync_service.trigger_sync</code> 在同一线程调用 <code>sync_threat_sources()</code>。</li>
+<li><strong>触发</strong>：在 Sync 弹窗勾选 <code>threat_feeds</code> 时执行；未勾选则跳过。</li>
 <li><strong>数据源</strong>：
 <ul>
 <li>Rapid7 Metasploit: <code>modules_metadata_base.json</code>（GitHub master）。</li>
@@ -497,8 +502,8 @@ RecordFuture 工具 --&gt; recordfuture_indicators --&gt; detection flag (record
 </li>
 <li><strong>注意</strong>：
 <ul>
-<li>仅“这次”传入的 CVE 会被标记；老数据需要手工重放（示例脚本见我们刚执行的 <code>python</code> 片段）。</li>
-<li>不会自动清零，若需撤销需人工 <code>UPDATE ... SET recordfuture_detected = FALSE</code>。</li>
+<li>仅“这次”传入的 CVE 会被标记；老数据需要手工重放，或在 Sync 弹窗勾选 <code>recordfuture_flags</code> 让 orchestrator 自动重打。</li>
+<li>不会自动清零指标（只会在 runner 执行时清零+重建），若需彻底撤销需人工 <code>UPDATE ... SET recordfuture_detected = FALSE</code>。</li>
 </ul>
 </li>
 </ul>
@@ -548,8 +553,8 @@ RecordFuture 工具 --&gt; recordfuture_indicators --&gt; detection flag (record
 <tr>
 <td><code>VulnerabilityDetailDialog</code></td>
 <td><code>getVulnerabilityCatalogEntry</code></td>
-<td>Catalog 描述、EPSS</td>
-<td>如果主表无描述，将 fallback 到 catalog 数据。</td>
+<td>聚合后的 CVSS/EPSS、Affected Devices</td>
+<td>直接读取 <code>vulnerabilities</code>（含 <code>cve_epss</code>），暂不展示 Defender Catalog 描述。</td>
 </tr>
 <tr>
 <td><code>pages/Tools</code> → <code>IPExtractBox</code></td>
@@ -588,27 +593,24 @@ RecordFuture 工具 --&gt; recordfuture_indicators --&gt; detection flag (record
 </blockquote>
 <h2 id="4-%E6%8C%89%E9%92%AE%E8%A7%A6%E5%8F%91%E5%9C%BA%E6%99%AF%E4%B8%80%E6%AC%A1-sync-%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88">4. 按钮触发场景：一次 Sync 会发生什么？</h2>
 <ol>
-<li><strong>用户点击 Header 的 Sync</strong> → <code>/api/sync</code> 后端启动后台线程。</li>
-<li><strong>阶段</strong>：
+<li><strong>用户点击 Header 的 Sync</strong> → 弹窗列出 registry 中的同步源（复选框 + 描述）。勾选完毕后调用 <code>/api/sync</code> 并在后台线程执行。</li>
+<li><strong>阶段/进度展示</strong>：
 <ul>
-<li><code>authenticating</code>（获取 Defender token）</li>
-<li><code>fetching</code>（跑 <code>defender.py</code>，落库 <code>vulnerabilities</code>）</li>
-<li><code>processing</code>（写主表/快照/同步记录）</li>
-<li><code>threat_sources</code>（自动刷新 Rapid7/Nuclei feed，布尔标记会先被清零再重建）</li>
-<li><code>snapshot</code>（写 <code>vulnerability_snapshots</code>）</li>
-<li><code>complete</code></li>
+<li><code>sync_progress.sources</code> 列出每个 runner 的状态（Pending/Running/Success/Error），Header 右上角会同步显示列表。</li>
+<li>默认顺序：<code>defender_vulnerabilities</code> → <code>threat_feeds</code> → <code>recordfuture_flags</code>，可按需取消勾选。</li>
 </ul>
 </li>
-<li><strong>自动更新的内容</strong>：<code>vulnerabilities</code>、<code>defender_vulnerability_catalog</code>、<code>sync_state</code>、<code>rapid_vulnerabilities</code>、<code>nuclei_vulnerabilities</code>、所有 <code>*_detected</code> 布尔列（Metasploit/Nuclei）。</li>
+<li><strong>自动更新的内容</strong>：取决于所选 runner。例如仅选 Defender 就只刷新 <code>vulnerabilities</code>/<code>sync_state</code>/<code>vulnerability_snapshots</code>；勾选 Threat feeds/RecordFuture 则会额外刷新对应表与布尔标记。</li>
 <li><strong>不会自动更新的内容</strong>：
 <ul>
-<li><code>recordfuture_indicators</code> 与 <code>recordfuture_detected</code>（除非同时调用保存接口）。</li>
-<li>任何 ServiceNow / AI / Recommendation 数据。</li>
-<li>已有 Redis 缓存（如 <code>stats:overview</code>）；需要等待 TTL 或手动清理。</li>
-<li>前端本地状态：<code>VulnerabilityTable</code> 只会在重新进入页面或触发过滤时重新 <code>fetch</code>。</li>
+<li><code>recordfuture_indicators</code>（仍需 Tools/脚本新增指标）。</li>
+<li><code>cve_epss</code> enrichment（DuckDB 导入），需独立脚本。</li>
+<li>ServiceNow / AI / Recommendation 数据。</li>
+<li>Redis 缓存（如 <code>stats:overview</code>）。</li>
+<li>前端本地状态：<code>VulnerabilityTable</code> 需重新进入或切换过滤条件才会重新 <code>fetch</code>。</li>
 </ul>
 </li>
-<li><strong>潜在影响</strong>：若同步后立即查看 Dashboard，可能看到旧统计；若 Threat Intel 标记清零后未重新下载成功（GitHub 不可达），徽章会暂时缺失。</li>
+<li><strong>潜在影响</strong>：若下载 Rapid7/Nuclei feed 失败或 runner 抛错，orchestrator 会停止在该阶段并在进度列表中标记 <code>error</code>；请检查网络与日志。</li>
 </ol>
 <h2 id="5-%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D-recordfuture-%E5%BE%BD%E7%AB%A0%E7%BC%BA%E5%A4%B1">5. 快速定位 RecordFuture 徽章缺失</h2>
 <ol>

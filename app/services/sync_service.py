@@ -1,14 +1,17 @@
 """Sync service for business logic."""
 import json
 import logging
-import subprocess
 import threading
-from typing import Optional
+from typing import List, Optional
 from mysql.connector import Error
 from database import get_db_connection
 from app.utils.cache import get_cache_client
-from app.services.threat_source_sync_service import sync_threat_sources
-from app.services.recordfuture_service import rebuild_detection_flags
+from app.services.sync_sources import (
+    get_default_source_keys,
+    get_sync_source_map,
+    get_sync_sources,
+)
+from app.services.sync_sources.base import SyncSource, SyncSourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +24,25 @@ sync_progress = {
     'progress': 0,
     'message': '',
     'is_complete': False,
-    'is_syncing': False
+    'is_syncing': False,
+    'sources': []
 }
 
 SYNC_PROGRESS_CACHE_KEY = "sync:progress"
+
+
+def list_sync_sources():
+    """Return available sync sources for UI consumption."""
+    return [
+        {
+            'key': source.key,
+            'name': source.name,
+            'description': source.description,
+            'default_enabled': source.default_enabled,
+            'order': source.order,
+        }
+        for source in get_sync_sources()
+    ]
 
 
 def _persist_progress():
@@ -50,6 +68,30 @@ def _load_progress_from_cache():
     except Exception as exc:
         logger.warning("Failed to load sync progress from cache: %s", exc)
     return None
+
+
+def _initialize_source_states(selected_sources: List[SyncSource]):
+    """Prepare per-source status tracking."""
+    sync_progress['sources'] = [
+        {
+            'key': source.key,
+            'name': source.name,
+            'status': 'pending',
+            'message': ''
+        }
+        for source in selected_sources
+    ]
+
+
+def _update_source_state(source_key: str, status: str, message: str = ''):
+    """Update the status dictionary for a single source."""
+    sources = sync_progress.get('sources', [])
+    for entry in sources:
+        if entry.get('key') == source_key:
+            entry.update({'status': status, 'message': message})
+            break
+    sync_progress['sources'] = sources
+    _persist_progress()
 
 
 def _set_progress(stage: str, progress_value: int, message: str, *, is_complete: bool = False, is_syncing: Optional[bool] = None):
@@ -119,7 +161,20 @@ def get_sync_status():
                 'records_count': result.get('records_count', 0) if result else 0
             }
         }
-        
+        source_status = {}
+        for src in get_sync_sources():
+            if src.key == 'defender_vulnerabilities':
+                last_sync = status['device_vulnerabilities']['last_sync_time']
+                sync_type = status['device_vulnerabilities']['sync_type']
+            else:
+                last_sync = None
+                sync_type = None
+            source_status[src.key] = {
+                'name': src.name,
+                'last_sync_time': last_sync,
+                'sync_type': sync_type
+            }
+        status['sources'] = source_status
         return status
     finally:
         cursor.close()
@@ -146,94 +201,73 @@ def get_sync_progress():
         'progress': source.get('progress', 0),
         'message': source.get('message', ''),
         'is_complete': source.get('is_complete', False),
-        'is_syncing': source.get('is_syncing', sync_in_progress)
+        'is_syncing': source.get('is_syncing', sync_in_progress),
+        'sources': source.get('sources', [])
     }
 
 
-def trigger_sync(data_sources=None):
-    """Trigger data sync in background thread.
-    
-    Args:
-        data_sources (list): Deprecated, kept for backward compatibility. Ignored.
-    
-    Returns:
-        dict: Status message
-    
-    Raises:
-        Exception: If sync is already in progress
-    """
-    global sync_in_progress, sync_progress
-    
+def _resolve_selected_sources(data_sources: Optional[List[str]]) -> List[SyncSource]:
+    """Validate and resolve requested sources."""
+    source_map = get_sync_source_map()
+    if data_sources:
+        selected = []
+        for key in data_sources:
+            source = source_map.get(key)
+            if not source:
+                raise Exception(f"Unknown data source: {key}")
+            selected.append(source)
+    else:
+        selected = [source_map[key] for key in get_default_source_keys() if key in source_map]
+    if not selected:
+        raise Exception("No valid data sources selected for sync")
+    return sorted(selected)
+
+
+def trigger_sync(data_sources: Optional[List[str]] = None):
+    """Trigger modular data sync in background thread."""
     global sync_in_progress
     if sync_in_progress:
         raise Exception('Sync is already in progress. Please wait for it to complete.')
-    
-    sync_in_progress = True
-    _set_progress('initializing', 0, 'Starting sync...', is_complete=False, is_syncing=True)
-    
-    def run_sync():
-        global sync_in_progress
-        try:
-            logger.info("Starting data sync in background thread (full sync)")
-            
-            # Update progress: Getting access token
-            _set_progress('authenticating', 10, 'Getting access token...', is_syncing=True)
-            
-            # Call defender.py main function directly (no data source arguments needed)
-            cmd = ['python3', 'defender.py']
-            
-            # Update progress: Starting data fetch
-            _set_progress('fetching', 30, 'Fetching data from Microsoft Defender API...', is_syncing=True)
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=3600  # 1 hour timeout
-            )
-            
-            # Update progress: Processing data
-            _set_progress('processing', 60, 'Processing and saving data...', is_syncing=True)
-            
-            if result.returncode == 0:
-                try:
-                    _set_progress('threat_sources', 80, 'Refreshing Rapid7/Nuclei intelligence...', is_syncing=True)
-                    sync_threat_sources()
-                except Exception as exc:
-                    logger.error("Threat source enrichment failed: %s", exc)
-                try:
-                    _set_progress('recordfuture', 85, 'Rebuilding RecordFuture intelligence flags...', is_syncing=True)
-                    rebuild_detection_flags()
-                except Exception as exc:
-                    logger.error("RecordFuture flag rebuild failed: %s", exc)
 
-                # Update progress: Creating snapshot
-                _set_progress('snapshot', 90, 'Creating snapshot...', is_syncing=True)
-                
-                logger.info("Data sync completed successfully")
-                
-                # Update progress: Complete
-                _set_progress('complete', 100, 'Sync completed successfully', is_complete=True, is_syncing=False)
-            else:
-                logger.error(f"Data sync failed: {result.stderr}")
-                _set_progress('error', 0, f'Sync failed: {result.stderr[:100]}', is_complete=True, is_syncing=False)
-                
-        except subprocess.TimeoutExpired:
-            logger.error("Data sync timed out")
-            _set_progress('error', 0, 'Sync timed out', is_complete=True, is_syncing=False)
-        except Exception as e:
-            logger.error(f"同步执行失败: {e}")
-            _set_progress('error', 0, f'Sync failed: {str(e)[:100]}', is_complete=True, is_syncing=False)
-        finally:
-            sync_in_progress = False
-            if not sync_progress.get('is_complete'):
-                _set_progress(sync_progress.get('stage', ''), sync_progress.get('progress', 0), sync_progress.get('message', ''), is_complete=sync_progress.get('is_complete', False), is_syncing=False)
-    
-    # Start background thread
-    sync_thread = threading.Thread(target=run_sync, daemon=True)
-    sync_thread.start()
-    
+    selected_sources = _resolve_selected_sources(data_sources)
+    sync_in_progress = True
+    _initialize_source_states(selected_sources)
+    _set_progress('initializing', 0, 'Starting sync...', is_complete=False, is_syncing=True)
+
+    def run_sync():
+        _run_sync_job(selected_sources)
+
+    thread = threading.Thread(target=run_sync, daemon=True)
+    thread.start()
     return {
-        'status': 'started',
-        'message': 'Data sync started in background'
+        'message': 'Sync started',
+        'data_sources': [source.key for source in selected_sources]
     }
+
+
+def _run_sync_job(selected_sources: List[SyncSource]):
+    """Execute sync sources sequentially."""
+    global sync_in_progress
+    total = len(selected_sources)
+    try:
+        for index, source in enumerate(selected_sources):
+            start_progress = int((index / total) * 100)
+            _update_source_state(source.key, 'running', 'In progress...')
+            _set_progress(source.key, start_progress, f'Running {source.name}...', is_syncing=True)
+            try:
+                result: Optional[SyncSourceResult] = source.runner()
+                if result and not result.success:
+                    raise Exception(result.message or 'Sync source reported failure')
+                success_message = (result.message if result else '') or 'Completed successfully'
+                _update_source_state(source.key, 'success', success_message)
+                end_progress = int(((index + 1) / total) * 100)
+                _set_progress(source.key, end_progress, success_message, is_syncing=True)
+            except Exception as exc:
+                logger.error("Sync source %s failed: %s", source.key, exc, exc_info=True)
+                _update_source_state(source.key, 'error', str(exc))
+                _set_progress('error', start_progress, f'{source.name} failed: {exc}', is_complete=True, is_syncing=False)
+                return
+
+        _set_progress('complete', 100, 'Sync completed successfully', is_complete=True, is_syncing=False)
+    finally:
+        sync_in_progress = False

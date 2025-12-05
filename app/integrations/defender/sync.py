@@ -7,8 +7,7 @@ from app.integrations.defender.service import get_defender_service
 from app.integrations.defender.repository import (
     save_vulnerabilities,
     record_snapshot,
-    update_sync_time,
-    save_vulnerability_catalog
+    update_sync_time
 )
 from app.constants.database import SYNC_TYPE_FULL, TABLE_VULNERABILITIES
 
@@ -82,9 +81,6 @@ def perform_full_sync(connection, access_token: Optional[str] = None):
         # Sync device vulnerability details (full)
         sync_device_vulnerabilities_full(connection, access_token)
         
-        # Sync vulnerability catalog (separate table)
-        sync_vulnerability_catalog(connection)
-        
         # Record snapshot after sync completes
         logger.info("Creating snapshot after sync...")
         snapshot_id = record_snapshot(connection)
@@ -131,19 +127,6 @@ def main():
             logger.info("Database connection closed")
     
     logger.info("Vulnerability data sync completed successfully")
-
-
-def sync_vulnerability_catalog(connection) -> None:
-    """Sync CVE catalog data into dedicated table."""
-    logger.info("Starting vulnerability catalog sync...")
-    service = get_defender_service()
-    catalog_records = service.fetch_vulnerability_catalog()
-    logger.info("Catalog API returned %s records", len(catalog_records) if catalog_records else 0)
-    if not catalog_records:
-        logger.warning("No catalog data to sync")
-        return
-    saved = save_vulnerability_catalog(connection, catalog_records)
-    logger.info("Catalog sync completed, %s records saved", saved)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ export interface PaginatedResponse<T> {
 export interface Vulnerability {
   id: string | number;
   cve_id: string;
+  cve_epss?: number;
   severity?: string;
   platform?: string;
   device_name?: string;
@@ -56,8 +57,6 @@ export interface Vulnerability {
   event_timestamp?: string;
   last_synced?: string;
   last_updated?: string;
-  catalog_description?: string;
-  catalog_epss?: number;
 }
 
 export interface VulnerabilityFilters {
@@ -120,17 +119,25 @@ export interface UniqueCveCount {
 }
 
 // Sync
-export type SyncDataSource = 'device_vulnerabilities' | 'vulnerability_list';
+export type SyncDataSource = string;
+
+export interface SyncSourceDefinition {
+  key: string;
+  name: string;
+  description: string;
+  default_enabled: boolean;
+  order: number;
+}
 
 export interface DataSourceSyncStatus {
   last_sync_time?: string;
   sync_type?: string;
+  name?: string;
 }
 
 export interface SyncStatus {
   device_vulnerabilities?: DataSourceSyncStatus;
-  vulnerability_list?: DataSourceSyncStatus;
-  is_syncing?: boolean;
+  sources?: Record<string, DataSourceSyncStatus>;
 }
 
 export interface SyncResponse {
@@ -219,20 +226,13 @@ export interface FixedVulnerabilitiesResponse {
   data: FixedVulnerability[];
 }
 
-export interface VulnerabilityCatalogEntry {
+export interface VulnerabilityDetailEntry {
   cve_id: string;
-  name?: string;
-  description?: string;
   severity?: string;
   cvss_v3?: number;
-  cvss_vector?: string;
-  exposed_machines?: number;
-  public_exploit?: boolean;
-  exploit_verified?: boolean;
-  exploit_in_kit?: boolean;
   epss?: number;
-  published_on?: string;
-  updated_on?: string;
+  affected_devices?: number;
+  last_seen_timestamp?: string;
 }
 
 // Recommendation Reports
@@ -328,4 +328,10 @@ export interface CVEVulnerabilityData {
   evidence: Evidence;
   remediation: RemediationInfo;
   total_vulnerabilities: number;
+}
+export interface SyncProgressSource {
+  key: string;
+  name: string;
+  status: 'pending' | 'running' | 'success' | 'error';
+  message?: string;
 }

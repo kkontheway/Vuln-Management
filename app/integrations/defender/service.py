@@ -8,8 +8,7 @@ from typing import Optional, List, Dict, Any
 from app.integrations.defender.auth import get_access_token
 from app.integrations.defender.api_client import (
     fetch_device_vulnerabilities,
-    run_advanced_query,
-    fetch_vulnerability_catalog
+    run_advanced_query
 )
 
 logger = logging.getLogger(__name__)
@@ -72,32 +71,6 @@ class DefenderService:
                     logger.error(f"Error fetching device vulnerabilities after token refresh: {retry_error}")
             return []
 
-    def fetch_vulnerability_catalog(self) -> List[Dict[str, Any]]:
-        """Fetch vulnerability catalog entries from Microsoft Defender API.
-        
-        Returns:
-            list: List of catalog records enriched with CVE metadata
-        """
-        access_token = self.get_access_token()
-        if not access_token:
-            logger.error("Cannot fetch vulnerability catalog: no access token")
-            return []
-        try:
-            catalog = fetch_vulnerability_catalog(access_token)
-            logger.info("Successfully fetched %s catalog records", len(catalog))
-            return catalog
-        except Exception as exc:
-            logger.error("Error fetching vulnerability catalog: %s", exc)
-            access_token = self.refresh_access_token()
-            if access_token:
-                try:
-                    catalog = fetch_vulnerability_catalog(access_token)
-                    logger.info("Successfully fetched %s catalog records after token refresh", len(catalog))
-                    return catalog
-                except Exception as retry_error:
-                    logger.error("Error fetching vulnerability catalog after token refresh: %s", retry_error)
-        return []
-    
     def run_advanced_query(self, query: str) -> Optional[Dict[str, Any]]:
         """Run advanced query against Microsoft Defender API.
         

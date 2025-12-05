@@ -5,16 +5,12 @@ import logging
 from typing import Optional, List, Dict, Any, Tuple
 from mysql.connector import Error
 from app.integrations.defender.transformers import transform_severity
-from app.utils.datetime_parser import (
-    parse_device_vulnerability_timestamps,
-    parse_vulnerability_list_timestamps
-)
+from app.utils.datetime_parser import parse_device_vulnerability_timestamps
 from app.constants.database import (
     TABLE_VULNERABILITIES,
     TABLE_SYNC_STATE,
     TABLE_VULNERABILITY_SNAPSHOTS,
     TABLE_CVE_DEVICE_SNAPSHOTS,
-    TABLE_VULNERABILITY_CATALOG,
     SYNC_TYPE_FULL
 )
 from app.integrations.defender.repository_helpers import (
@@ -410,80 +406,6 @@ def save_vulnerabilities(connection, vulnerabilities: List[Dict[str, Any]], is_d
     finally:
         if cursor:
             cursor.close()
-
-
-def save_vulnerability_catalog(connection, catalog_records: List[Dict[str, Any]]) -> int:
-    """Save CVE catalog records into dedicated catalog table."""
-    if not catalog_records:
-        logger.info("No catalog records to save")
-        return 0
-    cursor = connection.cursor()
-    insert_query = f"""
-    INSERT INTO {TABLE_VULNERABILITY_CATALOG} (
-        cve_id, name, description, severity, cvss_v3, cvss_vector,
-        exposed_machines, published_on, updated_on, first_detected,
-        public_exploit, exploit_verified, exploit_in_kit,
-        exploit_types, exploit_uris, supportability, tags, epss
-    ) VALUES (
-        %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s,
-        %s, %s, %s,
-        %s, %s, %s, %s, %s
-    )
-    ON DUPLICATE KEY UPDATE
-        name = VALUES(name),
-        description = VALUES(description),
-        severity = VALUES(severity),
-        cvss_v3 = VALUES(cvss_v3),
-        cvss_vector = VALUES(cvss_vector),
-        exposed_machines = VALUES(exposed_machines),
-        published_on = VALUES(published_on),
-        updated_on = VALUES(updated_on),
-        first_detected = VALUES(first_detected),
-        public_exploit = VALUES(public_exploit),
-        exploit_verified = VALUES(exploit_verified),
-        exploit_in_kit = VALUES(exploit_in_kit),
-        exploit_types = VALUES(exploit_types),
-        exploit_uris = VALUES(exploit_uris),
-        supportability = VALUES(supportability),
-        tags = VALUES(tags),
-        epss = VALUES(epss)
-    """
-    batch = []
-    for record in catalog_records:
-        cve_identifier = record.get('cveId') or record.get('id') or record.get('name')
-        if not cve_identifier:
-            continue
-        published_on, updated_on, first_detected = parse_vulnerability_list_timestamps(record)
-        batch.append((
-            str(cve_identifier),
-            record.get('name') or record.get('id'),
-            record.get('description'),
-            record.get('severity'),
-            _safe_float(record.get('cvssV3')),
-            record.get('cvssVector'),
-            _safe_int(record.get('exposedMachines')),
-            published_on,
-            updated_on,
-            first_detected,
-            bool(record.get('publicExploit')) if record.get('publicExploit') is not None else None,
-            bool(record.get('exploitVerified')) if record.get('exploitVerified') is not None else None,
-            bool(record.get('exploitInKit')) if record.get('exploitInKit') is not None else None,
-            json.dumps(record.get('exploitTypes') or []),
-            json.dumps(record.get('exploitUris') or []),
-            record.get('cveSupportability'),
-            json.dumps(record.get('tags') or []),
-            _safe_float(record.get('epss'))
-        ))
-    if not batch:
-        logger.warning("No valid catalog records after validation")
-        cursor.close()
-        return 0
-    cursor.executemany(insert_query, batch)
-    connection.commit()
-    cursor.close()
-    logger.info("Saved/updated %s catalog records", len(batch))
-    return len(batch)
 
 
 def get_last_snapshot(connection) -> Optional[int]:

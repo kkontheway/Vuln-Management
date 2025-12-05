@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatNumber } from '@/utils/formatters';
-import type { SyncDataSource } from '@/types/api';
+import type { SyncDataSource, SyncSourceDefinition, SyncProgressSource, SyncStatus } from '@/types/api';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
@@ -27,6 +27,13 @@ const getErrorMessage = (err: unknown, fallback: string): string => {
   return fallback;
 };
 
+const SOURCE_STATUS_LABEL: Record<SyncProgressSource['status'], string> = {
+  pending: 'Pending',
+  running: 'Running',
+  success: 'Completed',
+  error: 'Failed',
+};
+
 const Header = () => {
   const [stats, setStats] = useState({
     totalVulns: '-',
@@ -34,15 +41,14 @@ const Header = () => {
     high: '-',
     medium: '-',
   });
-  const [syncStatus, setSyncStatus] = useState<{
-    device_vulnerabilities?: { lastSyncTime: string };
-    vulnerability_list?: { lastSyncTime: string };
-  }>({});
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({});
   const [isSyncing, setIsSyncing] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showSnapshotModal, setShowSnapshotModal] = useState(false);
-  const [selectedDataSources, setSelectedDataSources] = useState<SyncDataSource[]>(['device_vulnerabilities']);
+  const [availableSources, setAvailableSources] = useState<SyncSourceDefinition[]>([]);
+  const [selectedDataSources, setSelectedDataSources] = useState<SyncDataSource[]>([]);
   const [syncProgress, setSyncProgress] = useState(0);
+  const [sourceProgress, setSourceProgress] = useState<SyncProgressSource[]>([]);
   const syncPollingIntervalRef = useRef<IntervalHandle | null>(null);
   const syncTimeoutRef = useRef<TimeoutHandle | null>(null);
   const isSyncingRef = useRef(false);
@@ -85,40 +91,29 @@ const Header = () => {
   const loadSyncStatus = useCallback(async () => {
     try {
       const data = await apiService.getSyncStatus();
-      const newStatus: {
-        device_vulnerabilities?: { lastSyncTime: string };
-        vulnerability_list?: { lastSyncTime: string };
-      } = {};
-      
-      if (data.device_vulnerabilities?.last_sync_time) {
-        newStatus.device_vulnerabilities = {
-          lastSyncTime: formatSyncTime(data.device_vulnerabilities.last_sync_time),
-        };
-      } else {
-        newStatus.device_vulnerabilities = { lastSyncTime: 'Never synced' };
-      }
-      
-      if (data.vulnerability_list?.last_sync_time) {
-        newStatus.vulnerability_list = {
-          lastSyncTime: formatSyncTime(data.vulnerability_list.last_sync_time),
-        };
-      } else {
-        newStatus.vulnerability_list = { lastSyncTime: 'Never synced' };
-      }
-      
-      setSyncStatus(newStatus);
+      setSyncStatus(data);
     } catch (error) {
       console.error('Failed to load sync status:', error);
-      setSyncStatus({
-        device_vulnerabilities: { lastSyncTime: 'Error' },
-        vulnerability_list: { lastSyncTime: 'Error' },
-      });
+      setSyncStatus({});
+    }
+  }, []);
+
+  const loadSyncSources = useCallback(async () => {
+    try {
+      const sources = await apiService.getSyncSources();
+      setAvailableSources(sources);
+      setSelectedDataSources((prev) =>
+        prev.length > 0 ? prev : sources.filter((src) => src.default_enabled).map((src) => src.key as SyncDataSource),
+      );
+    } catch (error) {
+      console.error('Failed to load sync sources:', error);
     }
   }, []);
 
   useEffect(() => {
     void loadStats();
     void loadSyncStatus();
+    void loadSyncSources();
     const interval = setInterval(() => {
       void loadSyncStatus();
     }, 30000);
@@ -128,7 +123,7 @@ const Header = () => {
         clearInterval(syncPollingIntervalRef.current);
       }
     };
-  }, [loadStats, loadSyncStatus]);
+  }, [loadStats, loadSyncSources, loadSyncStatus]);
 
   const stopSyncPolling = () => {
     if (syncPollingIntervalRef.current) {
@@ -152,6 +147,7 @@ const Header = () => {
         
         // Update progress from backend
         setSyncProgress(progressData.progress);
+        setSourceProgress(progressData.sources || []);
         
         // Check if sync is complete
         if (progressData.is_complete || !progressData.is_syncing) {
@@ -162,6 +158,7 @@ const Header = () => {
               setIsSyncing(false);
               isSyncingRef.current = false;
               setSyncProgress(0);
+              setSourceProgress([]);
               stopSyncPolling();
               void loadSyncStatus();
               toast({
@@ -174,6 +171,7 @@ const Header = () => {
             setIsSyncing(false);
             isSyncingRef.current = false;
             setSyncProgress(0);
+            setSourceProgress([]);
             stopSyncPolling();
             toast({
               title: "Sync failed",
@@ -184,6 +182,7 @@ const Header = () => {
             setIsSyncing(false);
             isSyncingRef.current = false;
             setSyncProgress(0);
+            setSourceProgress([]);
             stopSyncPolling();
             void loadSyncStatus();
           }
@@ -203,6 +202,7 @@ const Header = () => {
                 setIsSyncing(false);
                 isSyncingRef.current = false;
                 setSyncProgress(0);
+                setSourceProgress([]);
                 stopSyncPolling();
                 void loadSyncStatus();
                 toast({
@@ -267,6 +267,7 @@ const Header = () => {
       setIsSyncing(false);
       isSyncingRef.current = false;
       setSyncProgress(0);
+      setSourceProgress([]);
       stopSyncPolling();
       toast({
         title: "Sync failed",
@@ -325,7 +326,7 @@ const Header = () => {
               <div className="flex flex-col">
                 <span className="text-xs text-text-secondary">Last Sync:</span>
                 <span className="text-sm font-medium text-text-primary">
-                  {syncStatus.device_vulnerabilities?.lastSyncTime || '-'}
+                  {formatSyncTime(syncStatus.device_vulnerabilities?.last_sync_time)}
                 </span>
               </div>
               {isSyncing && (
@@ -337,6 +338,26 @@ const Header = () => {
                     </span>
                   </div>
                   <Progress value={syncProgress >= 100 ? 100 : syncProgress >= 90 ? undefined : syncProgress} className="h-1.5" />
+                  {sourceProgress.length > 0 && (
+                    <ul className="text-[11px] text-text-tertiary space-y-0.5 mt-1">
+                      {sourceProgress.map((source) => (
+                        <li key={source.key} className="flex items-center justify-between gap-2">
+                          <span className="truncate">{source.name}</span>
+                          <span
+                            className={`capitalize ${
+                              source.status === 'error'
+                                ? 'text-severity-critical'
+                                : source.status === 'success'
+                                ? 'text-green-500'
+                                : 'text-text-secondary'
+                            }`}
+                          >
+                            {SOURCE_STATUS_LABEL[source.status]}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
               <div className="flex gap-2">
@@ -374,35 +395,45 @@ const Header = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            {/* Device Vulnerabilities Option */}
-            <div className="flex items-start space-x-3 p-4 rounded-xl border border-glass-border bg-glass-bg/50 hover:bg-glass-bg/70 transition-colors">
-              <Checkbox
-                id="device_vulnerabilities"
-                checked={selectedDataSources.includes('device_vulnerabilities')}
-                onCheckedChange={() => toggleDataSource('device_vulnerabilities')}
-                className="mt-1"
-              />
-              <div className="flex-1 space-y-1">
-                <label
-                  htmlFor="device_vulnerabilities"
-                  className="text-sm font-medium text-text-primary cursor-pointer"
-                >
-                  Device Vulnerabilities
-                </label>
-                <p className="text-xs text-text-secondary">
-                  Device-level vulnerability details from Microsoft Defender SoftwareVulnerabilitiesByMachine API. Full sync from all devices.
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                    Full Sync
-                  </span>
-                  <span className="text-xs text-text-tertiary">
-                    Last synced: {syncStatus.device_vulnerabilities?.lastSyncTime || 'Never synced'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
+            {availableSources.length === 0 ? (
+              <p className="text-sm text-text-secondary">Loading available data sources...</p>
+            ) : (
+              availableSources.map((source) => {
+                const lastSync = syncStatus.sources?.[source.key]?.last_sync_time;
+                return (
+                  <div
+                    key={source.key}
+                    className="flex items-start space-x-3 p-4 rounded-xl border border-glass-border bg-glass-bg/50 hover:bg-glass-bg/70 transition-colors"
+                  >
+                    <Checkbox
+                      id={source.key}
+                      checked={selectedDataSources.includes(source.key)}
+                      onCheckedChange={() => toggleDataSource(source.key)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-1">
+                      <label
+                        htmlFor={source.key}
+                        className="text-sm font-medium text-text-primary cursor-pointer"
+                      >
+                        {source.name}
+                      </label>
+                      <p className="text-xs text-text-secondary">
+                        {source.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary capitalize">
+                          {source.default_enabled ? 'Default' : 'Optional'}
+                        </span>
+                        <span className="text-xs text-text-tertiary">
+                          Last synced: {lastSync ? formatSyncTime(lastSync) : 'Never synced'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
           {selectedDataSources.length === 0 && (
             <p className="text-sm text-red-500">Please select at least one data source.</p>

@@ -13,7 +13,9 @@ import type {
   ChatRequest,
   ChatResponse,
   FixedVulnerability,
-  VulnerabilityCatalogEntry,
+  VulnerabilityDetailEntry,
+  SyncSourceDefinition,
+  SyncProgressSource,
 } from '@/types/api';
 import type {
   ServiceNowTicketCreate,
@@ -60,6 +62,11 @@ interface SyncProgressResponse {
   message: string;
   is_complete: boolean;
   is_syncing: boolean;
+  sources?: SyncProgressSource[];
+}
+
+interface SyncSourcesResponse {
+  sources: SyncSourceDefinition[];
 }
 
 interface CreateSnapshotResponse {
@@ -135,8 +142,8 @@ export const apiService = {
     return response.data;
   },
 
-  getVulnerabilityCatalogEntry: async (cveId: string): Promise<VulnerabilityCatalogEntry> => {
-    const response = await api.get<VulnerabilityCatalogEntry>(`/vulnerability-catalog/${encodeURIComponent(cveId)}`);
+  getVulnerabilityCatalogEntry: async (cveId: string): Promise<VulnerabilityDetailEntry> => {
+    const response = await api.get<VulnerabilityDetailEntry>(`/vulnerability-catalog/${encodeURIComponent(cveId)}`);
     return response.data;
   },
 
@@ -144,6 +151,11 @@ export const apiService = {
   getSyncStatus: async (): Promise<SyncStatus> => {
     const response = await api.get<SyncStatus>('/sync-status');
     return response.data;
+  },
+
+  getSyncSources: async (): Promise<SyncSourceDefinition[]> => {
+    const response = await api.get<SyncSourcesResponse>('/sync-sources');
+    return response.data.sources;
   },
 
   getSyncProgress: async (): Promise<SyncProgressResponse> => {

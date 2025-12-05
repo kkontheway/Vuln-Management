@@ -11,7 +11,6 @@ from app.constants.database import (
     TABLE_RECOMMENDATION_REPORTS,
     TABLE_RAPID_VULNERABILITIES,
     TABLE_NUCLEI_VULNERABILITIES,
-    TABLE_VULNERABILITY_CATALOG,
 )
 
 logger = logging.getLogger(__name__)
@@ -284,33 +283,6 @@ def initialize_database(connection):
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """
         
-        # Create vulnerability catalog table
-        vulnerability_catalog_table = f"""
-        CREATE TABLE IF NOT EXISTS {TABLE_VULNERABILITY_CATALOG} (
-            cve_id VARCHAR(50) PRIMARY KEY,
-            name VARCHAR(100),
-            description TEXT,
-            severity VARCHAR(50),
-            cvss_v3 FLOAT,
-            cvss_vector VARCHAR(255),
-            exposed_machines INT,
-            published_on DATETIME,
-            updated_on DATETIME,
-            first_detected DATETIME,
-            public_exploit BOOLEAN,
-            exploit_verified BOOLEAN,
-            exploit_in_kit BOOLEAN,
-            exploit_types JSON,
-            exploit_uris JSON,
-            supportability VARCHAR(50),
-            tags JSON,
-            epss FLOAT,
-            UNIQUE KEY uk_catalog_cve (cve_id),
-            INDEX idx_catalog_epss (epss),
-            INDEX idx_catalog_published_on (published_on)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """
-        
         # Create sync state table
         sync_state_table = f"""
         CREATE TABLE IF NOT EXISTS {TABLE_SYNC_STATE} (
@@ -419,7 +391,6 @@ def initialize_database(connection):
         cursor.execute(recommendation_reports_table)
         cursor.execute(rapid_vulnerabilities_table)
         cursor.execute(nuclei_vulnerabilities_table)
-        cursor.execute(vulnerability_catalog_table)
         
         connection.commit()
         logger.info("Database table structure initialized successfully")
@@ -467,7 +438,7 @@ def drop_all_tables(connection):
             "vulnerabilities",  # New table, will be recreated
             "vulnerabilities_temp",  # Temporary table from previous sync
             "vulnerabilities_old",  # Old table from previous sync
-            TABLE_VULNERABILITY_CATALOG
+            "defender_vulnerability_catalog"
         ]
         
         # Drop tables one by one
