@@ -40,6 +40,7 @@ export interface Vulnerability {
   autopatch_covered?: boolean;
   metasploit_detected?: boolean;
   nuclei_detected?: boolean;
+  recordfuture_detected?: boolean;
   // Device and RBAC fields
   rbac_group_name?: string;
   // Security update fields
@@ -55,6 +56,8 @@ export interface Vulnerability {
   event_timestamp?: string;
   last_synced?: string;
   last_updated?: string;
+  catalog_description?: string;
+  catalog_epss?: number;
 }
 
 export interface VulnerabilityFilters {
@@ -69,6 +72,7 @@ export interface VulnerabilityFilters {
   os_platform?: string;
   exploitability_level?: string;
   software_vendor?: string | string[]; // Support both single value and array for multi-select
+  threat_intel?: string | string[];
 }
 
 // Statistics
@@ -79,6 +83,8 @@ export interface StatisticsResponse {
   exploitability_ratio?: ChartData[];
   autopatch_coverage?: AutopatchCoverage;
   new_vulnerabilities_7days?: number;
+  epss_distribution?: ChartData[];
+  intel_feed_overlap?: ChartData[];
 }
 
 export interface AutopatchCoverage {
@@ -211,6 +217,22 @@ export interface FixedVulnerability {
 
 export interface FixedVulnerabilitiesResponse {
   data: FixedVulnerability[];
+}
+
+export interface VulnerabilityCatalogEntry {
+  cve_id: string;
+  name?: string;
+  description?: string;
+  severity?: string;
+  cvss_v3?: number;
+  cvss_vector?: string;
+  exposed_machines?: number;
+  public_exploit?: boolean;
+  exploit_verified?: boolean;
+  exploit_in_kit?: boolean;
+  epss?: number;
+  published_on?: string;
+  updated_on?: string;
 }
 
 // Recommendation Reports

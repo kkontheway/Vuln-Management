@@ -11,6 +11,7 @@ from app.constants.database import (
     TABLE_RECOMMENDATION_REPORTS,
     TABLE_RAPID_VULNERABILITIES,
     TABLE_NUCLEI_VULNERABILITIES,
+    TABLE_VULNERABILITY_CATALOG,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,6 +151,7 @@ def migrate_database(connection):
             threat_source_columns = [
                 ("metasploit_detected", "idx_metasploit_detected"),
                 ("nuclei_detected", "idx_nuclei_detected"),
+                ("recordfuture_detected", "idx_recordfuture_detected"),
             ]
             for column_name, index_name in threat_source_columns:
                 try:
@@ -175,6 +177,7 @@ def migrate_database(connection):
                         else:
                             logger.warning("Error adding %s column: %s", column_name, e)
                             connection.rollback()
+
         except Error:
             # Table doesn't exist, will be created by initialize_database
             logger.info(f"{TABLE_VULNERABILITIES} table doesn't exist, will be created")
@@ -260,6 +263,7 @@ def initialize_database(connection):
             autopatch_covered BOOLEAN DEFAULT FALSE,
             metasploit_detected BOOLEAN DEFAULT FALSE,
             nuclei_detected BOOLEAN DEFAULT FALSE,
+            recordfuture_detected BOOLEAN DEFAULT FALSE,
             disk_paths JSON,
             registry_paths JSON,
             last_seen_timestamp DATETIME,
@@ -274,8 +278,36 @@ def initialize_database(connection):
             INDEX idx_autopatch_covered (autopatch_covered),
             INDEX idx_metasploit_detected (metasploit_detected),
             INDEX idx_nuclei_detected (nuclei_detected),
+            INDEX idx_recordfuture_detected (recordfuture_detected),
             INDEX idx_last_seen (last_seen_timestamp),
             INDEX idx_first_seen (first_seen_timestamp)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
+        
+        # Create vulnerability catalog table
+        vulnerability_catalog_table = f"""
+        CREATE TABLE IF NOT EXISTS {TABLE_VULNERABILITY_CATALOG} (
+            cve_id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(100),
+            description TEXT,
+            severity VARCHAR(50),
+            cvss_v3 FLOAT,
+            cvss_vector VARCHAR(255),
+            exposed_machines INT,
+            published_on DATETIME,
+            updated_on DATETIME,
+            first_detected DATETIME,
+            public_exploit BOOLEAN,
+            exploit_verified BOOLEAN,
+            exploit_in_kit BOOLEAN,
+            exploit_types JSON,
+            exploit_uris JSON,
+            supportability VARCHAR(50),
+            tags JSON,
+            epss FLOAT,
+            UNIQUE KEY uk_catalog_cve (cve_id),
+            INDEX idx_catalog_epss (epss),
+            INDEX idx_catalog_published_on (published_on)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """
         
@@ -387,6 +419,7 @@ def initialize_database(connection):
         cursor.execute(recommendation_reports_table)
         cursor.execute(rapid_vulnerabilities_table)
         cursor.execute(nuclei_vulnerabilities_table)
+        cursor.execute(vulnerability_catalog_table)
         
         connection.commit()
         logger.info("Database table structure initialized successfully")
@@ -433,7 +466,8 @@ def drop_all_tables(connection):
             "sync_state",  # Will be recreated with new structure
             "vulnerabilities",  # New table, will be recreated
             "vulnerabilities_temp",  # Temporary table from previous sync
-            "vulnerabilities_old"  # Old table from previous sync
+            "vulnerabilities_old",  # Old table from previous sync
+            TABLE_VULNERABILITY_CATALOG
         ]
         
         # Drop tables one by one

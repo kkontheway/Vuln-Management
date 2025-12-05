@@ -29,6 +29,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     exploitability: '',
     cvss_min: '',
     cvss_max: '',
+    threat_intel: [],
   });
   const [filterOptions, setFilterOptions] = useState<{
     severities: string[];
@@ -47,6 +48,13 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
   });
   const [vendorDropdownOpen, setVendorDropdownOpen] = useState(false);
   const vendorDropdownRef = useRef<HTMLDivElement>(null);
+  const [threatIntelDropdownOpen, setThreatIntelDropdownOpen] = useState(false);
+  const threatIntelDropdownRef = useRef<HTMLDivElement>(null);
+  const threatIntelOptions = [
+    { label: 'Metasploit', value: 'metasploit' },
+    { label: 'Nuclei', value: 'nuclei' },
+    { label: 'RecordFuture', value: 'recordfuture' },
+  ];
 
   useEffect(() => {
     void loadFilterOptions();
@@ -102,6 +110,22 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     return filters.software_vendor ? [filters.software_vendor] : [];
   };
 
+  const handleThreatIntelToggle = (value: string) => {
+    const currentSources = getSelectedThreatIntel();
+    const isSelected = currentSources.includes(value);
+    const newSources = isSelected
+      ? currentSources.filter((item) => item !== value)
+      : [...currentSources, value];
+    handleFilterChange('threat_intel', newSources.length > 0 ? newSources : '');
+  };
+
+  const getSelectedThreatIntel = (): string[] => {
+    if (Array.isArray(filters.threat_intel)) {
+      return filters.threat_intel;
+    }
+    return filters.threat_intel ? [filters.threat_intel] : [];
+  };
+
   const applyFilters = () => {
     // Convert 'all' values back to empty strings for API
     const apiFilters: VulnerabilityFilters = {
@@ -113,6 +137,9 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
       software_vendor: Array.isArray(filters.software_vendor) && filters.software_vendor.length > 0
         ? filters.software_vendor
         : filters.software_vendor || '',
+      threat_intel: Array.isArray(filters.threat_intel) && filters.threat_intel.length > 0
+        ? filters.threat_intel
+        : filters.threat_intel || '',
     };
     onFilterChange(apiFilters);
   };
@@ -128,27 +155,32 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
       cvss_min: '',
       cvss_max: '',
       software_vendor: '',
+      threat_intel: [],
     };
     setFilters(clearedFilters);
     onFilterChange(clearedFilters);
   };
 
-  // Close vendor dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(target)) {
         setVendorDropdownOpen(false);
+      }
+      if (threatIntelDropdownRef.current && !threatIntelDropdownRef.current.contains(target)) {
+        setThreatIntelDropdownOpen(false);
       }
     };
 
-    if (vendorDropdownOpen) {
+    if (vendorDropdownOpen || threatIntelDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [vendorDropdownOpen]);
+  }, [vendorDropdownOpen, threatIntelDropdownOpen]);
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -274,7 +306,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
               type="button"
               variant="outline"
               onClick={() => setVendorDropdownOpen(!vendorDropdownOpen)}
-              className="w-full justify-between h-8 text-xs"
+              className="w-full justify-between h-8 text-xs bg-white text-text-primary dark:bg-[#050506] dark:text-white"
               size="sm"
             >
               <span>
@@ -295,7 +327,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
               </svg>
             </Button>
             {vendorDropdownOpen && (
-              <div className="absolute z-50 w-full mt-1 bg-glass-bg border border-glass-border rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-50 w-full mt-1 rounded-lg border border-glass-border bg-white text-text-primary shadow-lg max-h-60 overflow-auto dark:bg-[#050506] dark:text-white">
                 <div className="p-2 space-y-2">
                   {filterOptions.vendors.length === 0 ? (
                     <div className="text-sm text-text-secondary p-2">No vendors available</div>
@@ -305,7 +337,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
                       return (
                         <label
                           key={vendor}
-                          className="flex items-center space-x-2 p-2 hover:bg-glass-hover rounded cursor-pointer"
+                          className="flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-black/5 dark:hover:bg-white/10"
                         >
                           <Checkbox
                             checked={isSelected}
@@ -316,6 +348,54 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
                       );
                     })
                   )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="space-y-2 relative" ref={threatIntelDropdownRef}>
+            <label className="text-xs font-medium text-text-secondary">Threat Intel</label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setThreatIntelDropdownOpen(!threatIntelDropdownOpen)}
+              className="w-full justify-between h-8 text-xs bg-white text-text-primary dark:bg-[#050506] dark:text-white"
+              size="sm"
+            >
+              <span>
+                {getSelectedThreatIntel().length > 0
+                  ? `${getSelectedThreatIntel().length} source(s) selected`
+                  : 'Select threat intel sources'}
+              </span>
+              <svg
+                className={cn(
+                  'h-4 w-4 transition-transform',
+                  threatIntelDropdownOpen && 'rotate-180'
+                )}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </Button>
+            {threatIntelDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 rounded-lg border border-glass-border bg-white text-text-primary shadow-lg max-h-60 overflow-auto dark:bg-[#050506] dark:text-white">
+                <div className="p-2 space-y-2">
+                  {threatIntelOptions.map((option) => {
+                    const isSelected = getSelectedThreatIntel().includes(option.value);
+                    return (
+                      <label
+                        key={option.value}
+                        className="flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-black/5 dark:hover:bg-white/10"
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleThreatIntelToggle(option.value)}
+                        />
+                        <span className="text-sm text-text-primary flex-1">{option.label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}

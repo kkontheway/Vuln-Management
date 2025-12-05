@@ -8,6 +8,7 @@ from mysql.connector import Error
 from database import get_db_connection
 from app.utils.cache import get_cache_client
 from app.services.threat_source_sync_service import sync_threat_sources
+from app.services.recordfuture_service import rebuild_detection_flags
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,11 @@ def trigger_sync(data_sources=None):
                     sync_threat_sources()
                 except Exception as exc:
                     logger.error("Threat source enrichment failed: %s", exc)
+                try:
+                    _set_progress('recordfuture', 85, 'Rebuilding RecordFuture intelligence flags...', is_syncing=True)
+                    rebuild_detection_flags()
+                except Exception as exc:
+                    logger.error("RecordFuture flag rebuild failed: %s", exc)
 
                 # Update progress: Creating snapshot
                 _set_progress('snapshot', 90, 'Creating snapshot...', is_syncing=True)

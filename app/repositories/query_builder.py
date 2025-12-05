@@ -123,43 +123,73 @@ def extract_device_vulnerability_values(vuln: Dict[str, Any], field_mapping: Dic
     return {}
 
 
-def build_vulnerability_filters(filters: Optional[Dict[str, Any]] = None, vuln_id: Optional[str] = None) -> Tuple[str, List[Any]]:
+def build_vulnerability_filters(
+    filters: Optional[Dict[str, Any]] = None,
+    vuln_id: Optional[str] = None,
+    table_alias: str = ""
+) -> Tuple[str, List[Any]]:
     """Build WHERE clause and parameters for vulnerability queries."""
     where_clauses: List[str] = []
     params: List[Any] = []
-    
+    threat_intel_filter: Optional[Any] = None
+
+    def qualify(column: str) -> str:
+        return f"{table_alias}.{column}" if table_alias else column
+
     if vuln_id:
-        where_clauses.append("id = %s")
+        where_clauses.append(f"{qualify('id')} = %s")
         params.append(vuln_id)
-    
+
     if filters:
+        threat_intel_filter = filters.get('threat_intel')
         for field, value in filters.items():
-            if field in ['cvss_min', 'cvss_max', 'date_from', 'date_to']:
+            if field in ['cvss_min', 'cvss_max', 'date_from', 'date_to', 'threat_intel']:
                 continue
             if isinstance(value, list) and value:
                 placeholders = ','.join(['%s'] * len(value))
-                where_clauses.append(f"{field} IN ({placeholders})")
+                where_clauses.append(f"{qualify(field)} IN ({placeholders})")
                 params.extend(value)
             elif value:
-                where_clauses.append(f"{field} LIKE %s")
+                where_clauses.append(f"{qualify(field)} LIKE %s")
                 params.append(f"%{value}%")
-    
+
+    if threat_intel_filter:
+        threat_values = (
+            threat_intel_filter
+            if isinstance(threat_intel_filter, list)
+            else [threat_intel_filter]
+        )
+        mapping = {
+            'metasploit': 'metasploit_detected',
+            'nuclei': 'nuclei_detected',
+            'recordfuture': 'recordfuture_detected',
+        }
+        conditions = []
+        for raw_value in threat_values:
+            if not raw_value:
+                continue
+            column = mapping.get(str(raw_value).lower())
+            if column:
+                conditions.append(f"{qualify(column)} = TRUE")
+        if conditions:
+            where_clauses.append("(" + " OR ".join(conditions) + ")")
+
     if filters:
         cvss_min = filters.get('cvss_min')
         cvss_max = filters.get('cvss_max')
         if cvss_min:
-            where_clauses.append("cvss_score >= %s")
+            where_clauses.append(f"{qualify('cvss_score')} >= %s")
             params.append(float(cvss_min))
         if cvss_max:
-            where_clauses.append("cvss_score <= %s")
+            where_clauses.append(f"{qualify('cvss_score')} <= %s")
             params.append(float(cvss_max))
         date_from = filters.get('date_from')
         date_to = filters.get('date_to')
         if date_from:
-            where_clauses.append("last_seen_timestamp >= %s")
+            where_clauses.append(f"{qualify('last_seen_timestamp')} >= %s")
             params.append(date_from)
         if date_to:
-            where_clauses.append("last_seen_timestamp <= %s")
+            where_clauses.append(f"{qualify('last_seen_timestamp')} <= %s")
             params.append(date_to)
     
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"

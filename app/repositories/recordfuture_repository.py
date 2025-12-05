@@ -72,3 +72,23 @@ def bulk_upsert_indicators(connection, indicators: List[Dict]) -> int:
         raise
     finally:
         cursor.close()
+
+
+def fetch_indicator_values_by_type(connection, indicator_type: str) -> List[str]:
+    """Fetch indicator values filtered by type."""
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            f"""
+            SELECT indicator_value
+            FROM {TABLE_RECORDFUTURE_INDICATORS}
+            WHERE indicator_type = %s
+            """,
+            (indicator_type,),
+        )
+        return [row[0] for row in cursor.fetchall() if row and row[0]]
+    except Exception as exc:
+        logger.error("Failed to fetch RecordFuture indicators: %s", exc)
+        raise
+    finally:
+        cursor.close()

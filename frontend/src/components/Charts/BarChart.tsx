@@ -25,11 +25,16 @@ const BarChart = ({ data, title }: BarChartProps) => {
   }
 
   // Transform data for Recharts stacked bar chart
-  const ageRanges = ['< 30天', '30-60天', '60-90天', '> 90天'];
-  const chartData = ageRanges.map((ageRange) => {
-    const rangeData = data[ageRange] || {};
+  const ageRanges = [
+    { key: '< 30天', label: '< 30 Days' },
+    { key: '30-60天', label: '30-60 Days' },
+    { key: '60-90天', label: '60-90 Days' },
+    { key: '> 90天', label: '> 90 Days' },
+  ];
+  const chartData = ageRanges.map(({ key, label }) => {
+    const rangeData = data[key] || {};
     return {
-      ageRange,
+      ageRange: label,
       Critical: rangeData.Critical || 0,
       High: rangeData.High || 0,
       Medium: rangeData.Medium || 0,
@@ -51,11 +56,11 @@ const BarChart = ({ data, title }: BarChartProps) => {
             <YAxis stroke="rgba(26, 26, 26, 0.7)" />
             <Tooltip />
             <Legend />
-            <Bar dataKey="Critical" stackId="a" fill={CHART_COLORS.critical} name="高危" />
-            <Bar dataKey="High" stackId="a" fill={CHART_COLORS.high} name="高危" />
-            <Bar dataKey="Medium" stackId="a" fill={CHART_COLORS.medium} name="中危" />
-            <Bar dataKey="Low" stackId="a" fill={CHART_COLORS.low} name="低危" />
-            <Bar dataKey="Other" stackId="a" fill="#9CA3AF" name="其他" />
+            <Bar dataKey="Critical" stackId="a" fill={CHART_COLORS.critical} name="Critical" />
+            <Bar dataKey="High" stackId="a" fill={CHART_COLORS.high} name="High" />
+            <Bar dataKey="Medium" stackId="a" fill={CHART_COLORS.medium} name="Medium" />
+            <Bar dataKey="Low" stackId="a" fill={CHART_COLORS.low} name="Low" />
+            <Bar dataKey="Other" stackId="a" fill="#9CA3AF" name="Other" />
           </RechartsBarChart>
         </ResponsiveContainer>
       </CardContent>
@@ -64,4 +69,3 @@ const BarChart = ({ data, title }: BarChartProps) => {
 };
 
 export default BarChart;
-

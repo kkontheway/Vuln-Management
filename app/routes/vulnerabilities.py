@@ -36,6 +36,10 @@ def get_vulnerabilities():
                 if value:
                     filters[field] = value
         
+        threat_intel_values = request.args.getlist('threat_intel')
+        if threat_intel_values:
+            filters['threat_intel'] = threat_intel_values
+
         # Add CVSS and date filters
         cvss_min = request.args.get('cvss_min')
         cvss_max = request.args.get('cvss_max')
@@ -119,3 +123,15 @@ def get_fixed_vulnerabilities():
         logger.error(f"获取已修复漏洞列表时出错: {e}")
         return jsonify({'error': str(e)}), 500
 
+
+@bp.route('/vulnerability-catalog/<cve_id>', methods=['GET'])
+def get_vulnerability_catalog_entry(cve_id: str):
+    """Get catalog metadata for a specific CVE."""
+    try:
+        result = vuln_service.get_catalog_details(cve_id)
+        if not result:
+            return jsonify({'error': 'Catalog entry not found'}), 404
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching catalog entry for {cve_id}: {e}")
+        return jsonify({'error': str(e)}), 500

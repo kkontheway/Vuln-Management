@@ -3,8 +3,10 @@ import Header from '../components/Header/Header';
 import PieChart from '../components/Charts/PieChart';
 import LineChart from '../components/Charts/LineChart';
 import BarChart from '../components/Charts/BarChart';
-import StatCard from '../components/Cards/StatCard';
+import VulnerabilityTrendCard from '../components/Cards/VulnerabilityTrendCard';
 import FixedVulnerabilitiesTable from '../components/Tables/FixedVulnerabilitiesTable';
+import EpssAnalyticsSection from '../components/Cards/EpssAnalyticsSection';
+import IntelligenceFeedOverlapChart from '../components/Charts/IntelligenceFeedOverlapChart';
 import apiService from '../services/api';
 import type { ChartData, SnapshotsTrendResponse, AgeDistributionData, AutopatchCoverage, FixedVulnerability } from '@/types/api';
 
@@ -15,12 +17,16 @@ const Dashboard = () => {
     exploitability_ratio: ChartData[];
     autopatch_coverage?: AutopatchCoverage;
     new_vulnerabilities_7days?: number;
+    epss_distribution: ChartData[];
+    intel_feed_overlap: ChartData[];
   }>({
     severity: [],
     age_distribution: {},
     exploitability_ratio: [],
     autopatch_coverage: undefined,
     new_vulnerabilities_7days: 0,
+    epss_distribution: [],
+    intel_feed_overlap: [],
   });
   const [trendData, setTrendData] = useState<SnapshotsTrendResponse['trend']>([]);
   const [fixedVulnerabilities, setFixedVulnerabilities] = useState<FixedVulnerability[]>([]);
@@ -39,6 +45,8 @@ const Dashboard = () => {
         exploitability_ratio: statsResponse.exploitability_ratio || [],
         autopatch_coverage: statsResponse.autopatch_coverage,
         new_vulnerabilities_7days: statsResponse.new_vulnerabilities_7days || 0,
+        epss_distribution: statsResponse.epss_distribution || [],
+        intel_feed_overlap: statsResponse.intel_feed_overlap || [],
       });
       setTrendData(trendResponse.trend || []);
       setFixedVulnerabilities(fixedResponse.data || []);
@@ -73,14 +81,17 @@ const Dashboard = () => {
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PieChart data={statistics.severity} title="By Severity" />
-          <StatCard
+          <VulnerabilityTrendCard
             title="New Vulnerabilities (7 Days)"
-            value={statistics.new_vulnerabilities_7days || 0}
-            description="Newly detected CVEs in the past 7 days"
+            description="Newly detected CVEs across the past week"
+            data={trendData}
+            totalNew={statistics.new_vulnerabilities_7days}
           />
         </div>
 
         <FixedVulnerabilitiesTable data={fixedVulnerabilities} limit={10} />
+
+        <EpssAnalyticsSection data={statistics.epss_distribution} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <PieChart
@@ -100,6 +111,7 @@ const Dashboard = () => {
         <LineChart data={trendData} title="Severity Trend" />
         <BarChart data={statistics.age_distribution} title="Vulnerability Age Distribution" />
         <PieChart data={statistics.exploitability_ratio} title="Exploitable vs Theoretical Risk" />
+        <IntelligenceFeedOverlapChart data={statistics.intel_feed_overlap} />
       </div>
     </div>
   );

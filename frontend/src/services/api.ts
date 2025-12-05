@@ -13,6 +13,7 @@ import type {
   ChatRequest,
   ChatResponse,
   FixedVulnerability,
+  VulnerabilityCatalogEntry,
 } from '@/types/api';
 import type {
   ServiceNowTicketCreate,
@@ -131,6 +132,11 @@ export const apiService = {
 
   getFixedVulnerabilities: async (limit: number = 50): Promise<FixedVulnerabilitiesResponse> => {
     const response = await api.get<FixedVulnerabilitiesResponse>('/fixed-vulnerabilities', { params: { limit } });
+    return response.data;
+  },
+
+  getVulnerabilityCatalogEntry: async (cveId: string): Promise<VulnerabilityCatalogEntry> => {
+    const response = await api.get<VulnerabilityCatalogEntry>(`/vulnerability-catalog/${encodeURIComponent(cveId)}`);
     return response.data;
   },
 

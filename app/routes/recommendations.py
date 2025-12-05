@@ -1,15 +1,9 @@
 """Recommendation report routes."""
 import logging
-from typing import Any, Dict, Optional
-
 from flask import Blueprint, jsonify, request
 
 from app.services import recommendation_service as rec_service
 from app.services import vulnerability_service as vuln_service
-from app.services.integration_settings_service import (
-    PROVIDER_AI,
-    integration_settings_service,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -35,32 +29,12 @@ def check_existing_report(cve_id: str):
         return jsonify({'error': str(e)}), 500
 
 
-def _compose_ai_config(override: Optional[Dict]) -> Optional[Dict[str, Any]]:
-    runtime = integration_settings_service.get_runtime_credentials(PROVIDER_AI)
-    metadata = (runtime or {}).get('metadata') or {}
-    secrets = (runtime or {}).get('secrets') or {}
-    override = override or {}
-    api_key = override.get('apiKey') or secrets.get('api_key')
-    base_url = override.get('baseUrl') or metadata.get('base_url')
-    if not api_key or not base_url:
-        return None
-    return {
-        'apiKey': api_key,
-        'baseUrl': base_url,
-        'model': override.get('model') or metadata.get('model', 'deepseek-chat'),
-        'temperature': override.get('temperature', metadata.get('temperature', 0.7)),
-        'maxTokens': override.get('maxTokens', metadata.get('max_tokens', 2000)),
-        'systemPrompt': override.get('systemPrompt', metadata.get('system_prompt', '')),
-    }
-
-
 @bp.route('/generate', methods=['POST'])
 def generate_report():
-    """Generate a recommendation report for a CVE using AI."""
+    """Generate a recommendation report for a CVE using existing vulnerability data."""
     try:
         data = request.json
         cve_id = data.get('cve_id', '').strip()
-        override_config = data.get('config', {})
         force_generate = data.get('force', False)
 
         if not cve_id:
@@ -75,12 +49,8 @@ def generate_report():
                     'report': existing
                 }), 409
 
-        ai_config = _compose_ai_config(override_config)
-        if not ai_config:
-            return jsonify({'error': 'AI配置尚未完成，请先在 Chat Config 页面填写。'}), 400
-
-        report_content = rec_service.generate_report_with_ai(cve_id, ai_config)
-        report_id = rec_service.save_report(cve_id, report_content, ai_config.get('systemPrompt', ''))
+        report_content = rec_service.build_report_from_data(cve_id)
+        report_id = rec_service.save_report(cve_id, report_content, '')
 
         return jsonify({
             'success': True,

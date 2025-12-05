@@ -1,9 +1,12 @@
 """Recommendation report service for business logic."""
 import logging
 from datetime import datetime, timedelta
+from textwrap import dedent
+from typing import Dict, List
+
 from database import get_db_connection
 from app.constants.database import TABLE_RECOMMENDATION_REPORTS
-from openai import OpenAI
+from app.services import vulnerability_service as vuln_service
 
 logger = logging.getLogger(__name__)
 
@@ -50,56 +53,151 @@ def check_existing_report(cve_id: str):
         connection.close()
 
 
-def generate_report_with_ai(cve_id: str, ai_config: dict) -> str:
-    """Generate recommendation report using AI.
-    
-    Args:
-        cve_id: CVE ID to generate report for
-        ai_config: AI configuration (apiKey, baseUrl, model, etc.)
-        
-    Returns:
-        str: Generated report content
-    """
-    try:
-        api_key = ai_config.get('apiKey')
-        base_url = ai_config.get('baseUrl')
-        model = ai_config.get('model', 'deepseek-chat')
-        temperature = ai_config.get('temperature', 0.7)
-        max_tokens = ai_config.get('maxTokens', 2000)
-        system_prompt = ai_config.get('systemPrompt') or 'You are a security expert specializing in vulnerability analysis and recommendations.'
-        
-        if not api_key or not base_url:
-            raise ValueError('AI configuration is required')
-        
-        # Initialize OpenAI client
-        client = OpenAI(
-            api_key=api_key,
-            base_url=base_url
+def build_report_from_data(cve_id: str) -> str:
+    """Create a recommendation report purely from stored vulnerability data."""
+    result = vuln_service.get_vulnerabilities(filters={'cve_id': cve_id}, page=1, per_page=1000)
+    vulnerabilities = result.get('data', [])
+    if not vulnerabilities:
+        raise ValueError('未找到该CVE的漏洞数据，无法生成报告')
+
+    summary = _summarize_vulnerabilities(vulnerabilities)
+    return _render_report_template(cve_id, summary)
+
+
+def _summarize_vulnerabilities(vulnerabilities: List[Dict]) -> Dict:
+    """Aggregate vulnerability data for reporting."""
+    seen_devices = set()
+    affected_devices: List[Dict] = []
+    os_distribution: Dict[str, int] = {}
+    dept_distribution: Dict[str, int] = {}
+
+    for vuln in vulnerabilities:
+        os_platform = vuln.get('os_platform') or 'Unknown'
+        dept = vuln.get('rbac_group_name') or 'Unknown'
+        os_distribution[os_platform] = os_distribution.get(os_platform, 0) + 1
+        dept_distribution[dept] = dept_distribution.get(dept, 0) + 1
+
+        device_key = vuln.get('device_id') or vuln.get('device_name')
+        if device_key and device_key not in seen_devices:
+            seen_devices.add(device_key)
+            affected_devices.append({
+                'device_id': vuln.get('device_id'),
+                'device_name': vuln.get('device_name'),
+                'os_platform': vuln.get('os_platform'),
+                'os_version': vuln.get('os_version'),
+                'status': vuln.get('status') or 'Vulnerable',
+                'rbac_group_name': vuln.get('rbac_group_name') or 'Unknown'
+            })
+
+    first_vuln = vulnerabilities[0]
+    evidence = {
+        'disk_paths': first_vuln.get('disk_paths') or [],
+        'registry_paths': first_vuln.get('registry_paths') or []
+    }
+    remediation = {
+        'security_update_available': first_vuln.get('security_update_available', False),
+        'recommended_security_update': first_vuln.get('recommended_security_update') or '',
+        'recommended_security_update_id': first_vuln.get('recommended_security_update_id') or '',
+        'recommended_security_update_url': first_vuln.get('recommended_security_update_url') or '',
+        'recommendation_reference': first_vuln.get('recommendation_reference') or ''
+    }
+
+    return {
+        'total_devices': len(seen_devices),
+        'os_distribution': os_distribution,
+        'dept_distribution': dept_distribution,
+        'severity': first_vuln.get('vulnerability_severity_level') or first_vuln.get('severity'),
+        'cvss_score': first_vuln.get('cvss_score'),
+        'software': {
+            'vendor': first_vuln.get('software_vendor') or '',
+            'name': first_vuln.get('software_name') or '',
+            'version': first_vuln.get('software_version') or ''
+        },
+        'remediation': remediation,
+        'evidence': evidence,
+        'affected_devices': affected_devices
+    }
+
+
+def _render_report_template(cve_id: str, summary: Dict) -> str:
+    """Render a plain-text report from aggregated data."""
+    os_top = _format_top_entries(summary['os_distribution'])
+    dept_top = _format_top_entries(summary['dept_distribution'])
+    cvss_text = f"{summary['cvss_score']:.1f}" if summary['cvss_score'] is not None else "N/A"
+
+    remediation = summary['remediation']
+    remediation_lines = []
+    if remediation['recommended_security_update']:
+        remediation_lines.append(f"- Recommended Update: {remediation['recommended_security_update']}")
+    if remediation['recommended_security_update_id']:
+        remediation_lines.append(f"- Update ID: {remediation['recommended_security_update_id']}")
+    if remediation['recommended_security_update_url']:
+        remediation_lines.append(f"- Vendor URL: {remediation['recommended_security_update_url']}")
+    if remediation['recommendation_reference']:
+        remediation_lines.append(f"- Reference: {remediation['recommendation_reference']}")
+    if not remediation_lines:
+        remediation_lines.append("- No vendor remediation guidance provided.")
+
+    device_lines = []
+    for idx, device in enumerate(summary['affected_devices'][:5], start=1):
+        name = device.get('device_name') or device.get('device_id') or 'Unknown Device'
+        platform = device.get('os_platform') or 'Unknown OS'
+        version = device.get('os_version') or ''
+        status = device.get('status') or 'Vulnerable'
+        dept = device.get('rbac_group_name') or 'Unknown'
+        device_lines.append(
+            f"  {idx}. {name} | {platform} {version} | {status} | Department: {dept}"
         )
-        
-        prompt = f"Generate a recommendation report for CVE {cve_id}."
-        
-        # Call AI API
-        logger.info(f"Generating report for CVE {cve_id} using AI")
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': prompt}
-            ],
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=False
-        )
-        
-        report_content = response.choices[0].message.content
-        logger.info(f"Successfully generated report for CVE {cve_id}")
-        
-        return report_content
-        
-    except Exception as e:
-        logger.error(f"Error generating report with AI: {e}", exc_info=True)
-        raise
+    if not device_lines:
+        device_lines.append("  (No device details available.)")
+
+    evidence_lines = []
+    for path in summary['evidence']['disk_paths'][:3]:
+        evidence_lines.append(f"  - File Path: {path}")
+    for path in summary['evidence']['registry_paths'][:3]:
+        evidence_lines.append(f"  - Registry Path: {path}")
+    if not evidence_lines:
+        evidence_lines.append("  - No specific evidence paths recorded.")
+
+    template = dedent(f"""
+        Vulnerability Recommendation Report - {cve_id}
+
+        Impact Summary
+        --------------
+        - Severity: {summary['severity'] or 'Unknown'}
+        - CVSS Score: {cvss_text}
+        - Total Affected Devices: {summary['total_devices']}
+        - Primary Operating Systems: {os_top}
+        - Top Impacted Departments: {dept_top}
+
+        Vulnerable Software
+        -------------------
+        - Vendor: {summary['software']['vendor'] or 'N/A'}
+        - Product: {summary['software']['name'] or 'N/A'}
+        - Version: {summary['software']['version'] or 'N/A'}
+
+        Sample Affected Devices
+        -----------------------
+        {'\n'.join(device_lines)}
+
+        Evidence Highlights
+        -------------------
+        {'\n'.join(evidence_lines)}
+
+        Recommended Actions
+        -------------------
+        {'\n'.join(remediation_lines)}
+    """).strip()
+
+    return template
+
+
+def _format_top_entries(distribution: Dict[str, int], limit: int = 3) -> str:
+    """Format top distribution entries as text."""
+    if not distribution:
+        return 'N/A'
+    sorted_items = sorted(distribution.items(), key=lambda item: item[1], reverse=True)[:limit]
+    return ', '.join(f"{name} ({count})" for name, count in sorted_items)
 
 
 def save_report(cve_id: str, report_content: str, ai_prompt: str = ''):

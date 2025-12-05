@@ -2871,3 +2871,1380 @@ mysql.connector.errors.IntegrityError: 1062 (23000): Duplicate entry '2-CVE-2024
 2025-12-01 14:16:41,918 - app.integrations.defender.sync - INFO - Full sync process completed successfully
 2025-12-01 14:16:41,919 - app.integrations.defender.sync - INFO - Database connection closed
 2025-12-01 14:16:41,919 - app.integrations.defender.sync - INFO - Vulnerability data sync completed successfully
+2025-12-02 14:09:56,484 - app.integrations.defender.sync - INFO - Starting Defender vulnerability data sync...
+2025-12-02 14:09:56,509 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-12-02 14:09:56,509 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-12-02 14:09:56,509 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-02 14:09:56,513 - app.integrations.defender.database - INFO - Successfully connected to MySQL database
+2025-12-02 14:09:56,513 - app.integrations.defender.sync - INFO - Initializing database...
+2025-12-02 14:09:56,515 - app.integrations.defender.database - INFO - sync_state table exists, checking structure...
+2025-12-02 14:09:56,515 - app.integrations.defender.database - INFO - Adding records_count column to sync_state table...
+2025-12-02 14:09:56,515 - app.integrations.defender.database - WARNING - Error adding records_count column: Unread result found
+2025-12-02 14:09:56,517 - app.integrations.defender.database - INFO - data_source column doesn't exist, no need to remove
+2025-12-02 14:09:56,521 - app.integrations.defender.database - INFO - vulnerabilities table exists, checking for autopatch_covered column...
+2025-12-02 14:09:56,522 - app.integrations.defender.database - INFO - vulnerabilities table already has autopatch_covered column
+2025-12-02 14:09:56,523 - app.integrations.defender.database - INFO - vulnerabilities already has metasploit_detected column
+2025-12-02 14:09:56,524 - app.integrations.defender.database - INFO - vulnerabilities already has nuclei_detected column
+2025-12-02 14:09:56,539 - app.integrations.defender.database - INFO - Index idx_cve_epss already exists
+2025-12-02 14:09:56,540 - app.integrations.defender.database - INFO - Index idx_cve_published_on already exists
+2025-12-02 14:09:56,583 - app.integrations.defender.database - INFO - Database table structure initialized successfully
+2025-12-02 14:09:56,583 - app.integrations.defender.sync - INFO - Database initialization completed
+2025-12-02 14:09:56,584 - app.integrations.defender.sync - INFO - Starting full sync process...
+2025-12-02 14:09:56,584 - app.integrations.defender.sync - INFO - Starting full sync...
+2025-12-02 14:09:56,584 - app.integrations.defender.sync - INFO - Starting device vulnerability details full sync...
+2025-12-02 14:09:56,584 - app.integrations.defender.sync - INFO - Fetching vulnerabilities from Microsoft Defender API...
+2025-12-02 14:09:57,202 - app.integrations.defender.auth - INFO - Successfully obtained access token
+2025-12-02 14:09:57,202 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pageSize=50000
+2025-12-02 14:10:01,911 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:10:01,912 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjMsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjoxMDkyOX0=
+2025-12-02 14:10:07,419 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:10:07,420 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjozOTUyNH0=
+2025-12-02 14:10:13,880 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:10:13,881 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0Ijo4OTUyNH0=
+2025-12-02 14:10:19,413 - app.integrations.defender.api_client - INFO - Fetched 26640 records
+2025-12-02 14:10:19,415 - app.integrations.defender.api_client - INFO - Total fetched 176640 records
+2025-12-02 14:10:19,416 - app.integrations.defender.service - INFO - Successfully fetched 176640 vulnerability records
+2025-12-02 14:10:19,416 - app.integrations.defender.sync - INFO - API returned 176640 vulnerability records
+2025-12-02 14:10:19,416 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=200
+2025-12-02 14:10:25,214 - app.integrations.defender.api_client - INFO - Fetched 200 catalog records
+2025-12-02 14:10:25,215 - app.integrations.defender.api_client - INFO - Total fetched 200 vulnerability catalog records
+2025-12-02 14:10:25,217 - app.integrations.defender.service - INFO - Successfully fetched 200 catalog records
+2025-12-02 14:10:25,341 - app.integrations.defender.sync - INFO - Attached catalog metadata to 70 out of 176640 vulnerability records
+2025-12-02 14:10:25,341 - app.integrations.defender.sync - INFO - Saving 176640 vulnerability records to database...
+2025-12-02 14:10:25,341 - app.integrations.defender.repository - INFO - Starting to save 176640 vulnerability records...
+2025-12-02 14:10:25,343 - app.integrations.defender.repository - INFO - Checking if vulnerabilities table exists...
+2025-12-02 14:10:25,346 - app.integrations.defender.repository - INFO - vulnerabilities table exists
+2025-12-02 14:10:25,346 - app.integrations.defender.repository - INFO - Creating temporary table for data insertion...
+2025-12-02 14:10:25,559 - app.integrations.defender.repository - INFO - Temporary table vulnerabilities_temp created successfully
+2025-12-02 14:10:25,559 - app.integrations.defender.repository - INFO - Validating and preparing 176640 records for batch insert...
+2025-12-02 14:10:25,596 - app.integrations.defender.repository - INFO - Validated 176640 out of 176640 records
+2025-12-02 14:10:28,621 - app.integrations.defender.repository - INFO - Inserting 176640 records in batches of 2000...
+2025-12-02 14:10:29,294 - app.integrations.defender.repository - INFO - Inserted batch 1 (2000 records)
+2025-12-02 14:10:29,644 - app.integrations.defender.repository - INFO - Inserted batch 2 (2000 records)
+2025-12-02 14:10:29,982 - app.integrations.defender.repository - INFO - Inserted batch 3 (2000 records)
+2025-12-02 14:10:30,368 - app.integrations.defender.repository - INFO - Inserted batch 4 (2000 records)
+2025-12-02 14:10:30,693 - app.integrations.defender.repository - INFO - Inserted batch 5 (2000 records)
+2025-12-02 14:10:30,990 - app.integrations.defender.repository - INFO - Inserted batch 6 (2000 records)
+2025-12-02 14:10:31,409 - app.integrations.defender.repository - INFO - Inserted batch 7 (2000 records)
+2025-12-02 14:10:31,801 - app.integrations.defender.repository - INFO - Inserted batch 8 (2000 records)
+2025-12-02 14:10:32,096 - app.integrations.defender.repository - INFO - Inserted batch 9 (2000 records)
+2025-12-02 14:10:32,454 - app.integrations.defender.repository - INFO - Inserted batch 10 (2000 records)
+2025-12-02 14:10:32,750 - app.integrations.defender.repository - INFO - Inserted batch 11 (2000 records)
+2025-12-02 14:10:33,081 - app.integrations.defender.repository - INFO - Inserted batch 12 (2000 records)
+2025-12-02 14:10:33,417 - app.integrations.defender.repository - INFO - Inserted batch 13 (2000 records)
+2025-12-02 14:10:33,671 - app.integrations.defender.repository - INFO - Inserted batch 14 (2000 records)
+2025-12-02 14:10:33,924 - app.integrations.defender.repository - INFO - Inserted batch 15 (2000 records)
+2025-12-02 14:10:34,265 - app.integrations.defender.repository - INFO - Inserted batch 16 (2000 records)
+2025-12-02 14:10:34,541 - app.integrations.defender.repository - INFO - Inserted batch 17 (2000 records)
+2025-12-02 14:10:34,892 - app.integrations.defender.repository - INFO - Inserted batch 18 (2000 records)
+2025-12-02 14:10:35,138 - app.integrations.defender.repository - INFO - Inserted batch 19 (2000 records)
+2025-12-02 14:10:35,455 - app.integrations.defender.repository - INFO - Inserted batch 20 (2000 records)
+2025-12-02 14:10:35,725 - app.integrations.defender.repository - INFO - Inserted batch 21 (2000 records)
+2025-12-02 14:10:36,002 - app.integrations.defender.repository - INFO - Inserted batch 22 (2000 records)
+2025-12-02 14:10:36,381 - app.integrations.defender.repository - INFO - Inserted batch 23 (2000 records)
+2025-12-02 14:10:36,895 - app.integrations.defender.repository - INFO - Inserted batch 24 (2000 records)
+2025-12-02 14:10:37,235 - app.integrations.defender.repository - INFO - Inserted batch 25 (2000 records)
+2025-12-02 14:10:37,496 - app.integrations.defender.repository - INFO - Inserted batch 26 (2000 records)
+2025-12-02 14:10:37,774 - app.integrations.defender.repository - INFO - Inserted batch 27 (2000 records)
+2025-12-02 14:10:38,042 - app.integrations.defender.repository - INFO - Inserted batch 28 (2000 records)
+2025-12-02 14:10:38,543 - app.integrations.defender.repository - INFO - Inserted batch 29 (2000 records)
+2025-12-02 14:10:38,828 - app.integrations.defender.repository - INFO - Inserted batch 30 (2000 records)
+2025-12-02 14:10:39,096 - app.integrations.defender.repository - INFO - Inserted batch 31 (2000 records)
+2025-12-02 14:10:39,455 - app.integrations.defender.repository - INFO - Inserted batch 32 (2000 records)
+2025-12-02 14:10:39,722 - app.integrations.defender.repository - INFO - Inserted batch 33 (2000 records)
+2025-12-02 14:10:39,985 - app.integrations.defender.repository - INFO - Inserted batch 34 (2000 records)
+2025-12-02 14:10:40,283 - app.integrations.defender.repository - INFO - Inserted batch 35 (2000 records)
+2025-12-02 14:10:40,672 - app.integrations.defender.repository - INFO - Inserted batch 36 (2000 records)
+2025-12-02 14:10:40,916 - app.integrations.defender.repository - INFO - Inserted batch 37 (2000 records)
+2025-12-02 14:10:41,170 - app.integrations.defender.repository - INFO - Inserted batch 38 (2000 records)
+2025-12-02 14:10:41,476 - app.integrations.defender.repository - INFO - Inserted batch 39 (2000 records)
+2025-12-02 14:10:41,742 - app.integrations.defender.repository - INFO - Inserted batch 40 (2000 records)
+2025-12-02 14:10:41,990 - app.integrations.defender.repository - INFO - Inserted batch 41 (2000 records)
+2025-12-02 14:10:42,419 - app.integrations.defender.repository - INFO - Inserted batch 42 (2000 records)
+2025-12-02 14:10:42,739 - app.integrations.defender.repository - INFO - Inserted batch 43 (2000 records)
+2025-12-02 14:10:42,992 - app.integrations.defender.repository - INFO - Inserted batch 44 (2000 records)
+2025-12-02 14:10:43,264 - app.integrations.defender.repository - INFO - Inserted batch 45 (2000 records)
+2025-12-02 14:10:43,534 - app.integrations.defender.repository - INFO - Inserted batch 46 (2000 records)
+2025-12-02 14:10:43,799 - app.integrations.defender.repository - INFO - Inserted batch 47 (2000 records)
+2025-12-02 14:10:44,057 - app.integrations.defender.repository - INFO - Inserted batch 48 (2000 records)
+2025-12-02 14:10:44,527 - app.integrations.defender.repository - INFO - Inserted batch 49 (2000 records)
+2025-12-02 14:10:44,789 - app.integrations.defender.repository - INFO - Inserted batch 50 (2000 records)
+2025-12-02 14:10:45,053 - app.integrations.defender.repository - INFO - Inserted batch 51 (2000 records)
+2025-12-02 14:10:45,464 - app.integrations.defender.repository - INFO - Inserted batch 52 (2000 records)
+2025-12-02 14:10:45,781 - app.integrations.defender.repository - INFO - Inserted batch 53 (2000 records)
+2025-12-02 14:10:46,048 - app.integrations.defender.repository - INFO - Inserted batch 54 (2000 records)
+2025-12-02 14:10:46,355 - app.integrations.defender.repository - INFO - Inserted batch 55 (2000 records)
+2025-12-02 14:10:46,738 - app.integrations.defender.repository - INFO - Inserted batch 56 (2000 records)
+2025-12-02 14:10:47,011 - app.integrations.defender.repository - INFO - Inserted batch 57 (2000 records)
+2025-12-02 14:10:47,327 - app.integrations.defender.repository - INFO - Inserted batch 58 (2000 records)
+2025-12-02 14:10:47,603 - app.integrations.defender.repository - INFO - Inserted batch 59 (2000 records)
+2025-12-02 14:10:47,861 - app.integrations.defender.repository - INFO - Inserted batch 60 (2000 records)
+2025-12-02 14:10:48,111 - app.integrations.defender.repository - INFO - Inserted batch 61 (2000 records)
+2025-12-02 14:10:48,658 - app.integrations.defender.repository - INFO - Inserted batch 62 (2000 records)
+2025-12-02 14:10:48,967 - app.integrations.defender.repository - INFO - Inserted batch 63 (2000 records)
+2025-12-02 14:10:49,245 - app.integrations.defender.repository - INFO - Inserted batch 64 (2000 records)
+2025-12-02 14:10:49,705 - app.integrations.defender.repository - INFO - Inserted batch 65 (2000 records)
+2025-12-02 14:10:49,975 - app.integrations.defender.repository - INFO - Inserted batch 66 (2000 records)
+2025-12-02 14:10:50,304 - app.integrations.defender.repository - INFO - Inserted batch 67 (2000 records)
+2025-12-02 14:10:50,611 - app.integrations.defender.repository - INFO - Inserted batch 68 (2000 records)
+2025-12-02 14:10:50,873 - app.integrations.defender.repository - INFO - Inserted batch 69 (2000 records)
+2025-12-02 14:10:51,142 - app.integrations.defender.repository - INFO - Inserted batch 70 (2000 records)
+2025-12-02 14:10:51,477 - app.integrations.defender.repository - INFO - Inserted batch 71 (2000 records)
+2025-12-02 14:10:51,765 - app.integrations.defender.repository - INFO - Inserted batch 72 (2000 records)
+2025-12-02 14:10:52,027 - app.integrations.defender.repository - INFO - Inserted batch 73 (2000 records)
+2025-12-02 14:10:52,326 - app.integrations.defender.repository - INFO - Inserted batch 74 (2000 records)
+2025-12-02 14:10:52,604 - app.integrations.defender.repository - INFO - Inserted batch 75 (2000 records)
+2025-12-02 14:10:52,879 - app.integrations.defender.repository - INFO - Inserted batch 76 (2000 records)
+2025-12-02 14:10:53,138 - app.integrations.defender.repository - INFO - Inserted batch 77 (2000 records)
+2025-12-02 14:10:53,521 - app.integrations.defender.repository - INFO - Inserted batch 78 (2000 records)
+2025-12-02 14:10:53,777 - app.integrations.defender.repository - INFO - Inserted batch 79 (2000 records)
+2025-12-02 14:10:54,044 - app.integrations.defender.repository - INFO - Inserted batch 80 (2000 records)
+2025-12-02 14:10:54,340 - app.integrations.defender.repository - INFO - Inserted batch 81 (2000 records)
+2025-12-02 14:10:54,618 - app.integrations.defender.repository - INFO - Inserted batch 82 (2000 records)
+2025-12-02 14:10:54,884 - app.integrations.defender.repository - INFO - Inserted batch 83 (2000 records)
+2025-12-02 14:10:55,149 - app.integrations.defender.repository - INFO - Inserted batch 84 (2000 records)
+2025-12-02 14:10:55,495 - app.integrations.defender.repository - INFO - Inserted batch 85 (2000 records)
+2025-12-02 14:10:55,759 - app.integrations.defender.repository - INFO - Inserted batch 86 (2000 records)
+2025-12-02 14:10:56,021 - app.integrations.defender.repository - INFO - Inserted batch 87 (2000 records)
+2025-12-02 14:10:56,341 - app.integrations.defender.repository - INFO - Inserted batch 88 (2000 records)
+2025-12-02 14:10:56,444 - app.integrations.defender.repository - INFO - Inserted batch 89 (640 records)
+2025-12-02 14:10:56,718 - app.integrations.defender.repository - INFO - Successfully inserted 176640 records into temporary table
+2025-12-02 14:10:56,718 - app.integrations.defender.repository - INFO - Switching tables atomically...
+2025-12-02 14:10:56,845 - app.integrations.defender.repository - INFO - Renamed vulnerabilities to vulnerabilities_old
+2025-12-02 14:10:56,861 - app.integrations.defender.repository - INFO - Renamed vulnerabilities_temp to vulnerabilities
+2025-12-02 14:10:56,908 - app.integrations.defender.repository - INFO - Dropped old table vulnerabilities_old
+2025-12-02 14:10:56,909 - app.integrations.defender.repository - INFO - Verifying data was saved correctly...
+2025-12-02 14:10:56,976 - app.integrations.defender.repository - INFO - Verification: 176640 records found in vulnerabilities table
+2025-12-02 14:10:56,977 - app.integrations.defender.repository - INFO - Data verification successful: 176640 records match expected count
+2025-12-02 14:10:56,977 - app.integrations.defender.repository - INFO - Successfully saved 176640 vulnerability records using table switching method
+2025-12-02 14:10:57,102 - app.integrations.defender.sync - INFO - Database verification: 176640 records in database after save
+2025-12-02 14:10:57,103 - app.integrations.defender.sync - INFO - Device vulnerability details full sync completed, fetched 176640 records, saved 176640 records
+2025-12-02 14:10:57,108 - app.integrations.defender.repository - INFO - Sync time updated successfully: 2025-12-02 14:10:57.103180, type: full, records: 176640
+2025-12-02 14:10:57,108 - app.integrations.defender.sync - INFO - Sync time recorded: 2025-12-02 14:10:57.103180, records: 176640
+2025-12-02 14:10:57,207 - app.integrations.defender.sync - INFO - Creating snapshot after sync...
+2025-12-02 14:10:59,696 - app.integrations.defender.repository - INFO - Recording CVE-Device combinations for snapshot (deduplicating by CVE-Device)...
+2025-12-02 14:11:02,024 - app.integrations.defender.repository - INFO - Found 154301 unique CVE-Device combinations after deduplication
+2025-12-02 14:11:02,179 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 1 (2000 records)
+2025-12-02 14:11:02,312 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 2 (2000 records)
+2025-12-02 14:11:02,396 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 3 (2000 records)
+2025-12-02 14:11:02,472 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 4 (2000 records)
+2025-12-02 14:11:02,550 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 5 (2000 records)
+2025-12-02 14:11:02,627 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 6 (2000 records)
+2025-12-02 14:11:02,706 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 7 (2000 records)
+2025-12-02 14:11:02,790 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 8 (2000 records)
+2025-12-02 14:11:02,875 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 9 (2000 records)
+2025-12-02 14:11:02,962 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 10 (2000 records)
+2025-12-02 14:11:03,049 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 11 (2000 records)
+2025-12-02 14:11:03,126 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 12 (2000 records)
+2025-12-02 14:11:03,432 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 13 (2000 records)
+2025-12-02 14:11:03,542 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 14 (2000 records)
+2025-12-02 14:11:03,633 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 15 (2000 records)
+2025-12-02 14:11:03,719 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 16 (2000 records)
+2025-12-02 14:11:03,797 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 17 (2000 records)
+2025-12-02 14:11:03,884 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 18 (2000 records)
+2025-12-02 14:11:03,958 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 19 (2000 records)
+2025-12-02 14:11:04,048 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 20 (2000 records)
+2025-12-02 14:11:04,130 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 21 (2000 records)
+2025-12-02 14:11:04,216 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 22 (2000 records)
+2025-12-02 14:11:04,356 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 23 (2000 records)
+2025-12-02 14:11:04,500 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 24 (2000 records)
+2025-12-02 14:11:04,588 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 25 (2000 records)
+2025-12-02 14:11:04,661 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 26 (2000 records)
+2025-12-02 14:11:04,735 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 27 (2000 records)
+2025-12-02 14:11:04,810 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 28 (2000 records)
+2025-12-02 14:11:04,885 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 29 (2000 records)
+2025-12-02 14:11:04,955 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 30 (2000 records)
+2025-12-02 14:11:05,032 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 31 (2000 records)
+2025-12-02 14:11:05,108 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 32 (2000 records)
+2025-12-02 14:11:05,188 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 33 (2000 records)
+2025-12-02 14:11:05,357 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 34 (2000 records)
+2025-12-02 14:11:05,433 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 35 (2000 records)
+2025-12-02 14:11:05,509 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 36 (2000 records)
+2025-12-02 14:11:05,584 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 37 (2000 records)
+2025-12-02 14:11:05,660 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 38 (2000 records)
+2025-12-02 14:11:05,735 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 39 (2000 records)
+2025-12-02 14:11:05,812 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 40 (2000 records)
+2025-12-02 14:11:05,895 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 41 (2000 records)
+2025-12-02 14:11:05,977 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 42 (2000 records)
+2025-12-02 14:11:06,049 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 43 (2000 records)
+2025-12-02 14:11:06,120 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 44 (2000 records)
+2025-12-02 14:11:06,194 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 45 (2000 records)
+2025-12-02 14:11:06,364 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 46 (2000 records)
+2025-12-02 14:11:06,440 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 47 (2000 records)
+2025-12-02 14:11:06,514 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 48 (2000 records)
+2025-12-02 14:11:06,590 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 49 (2000 records)
+2025-12-02 14:11:06,662 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 50 (2000 records)
+2025-12-02 14:11:06,739 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 51 (2000 records)
+2025-12-02 14:11:06,810 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 52 (2000 records)
+2025-12-02 14:11:06,887 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 53 (2000 records)
+2025-12-02 14:11:06,956 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 54 (2000 records)
+2025-12-02 14:11:07,029 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 55 (2000 records)
+2025-12-02 14:11:07,108 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 56 (2000 records)
+2025-12-02 14:11:07,182 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 57 (2000 records)
+2025-12-02 14:11:07,454 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 58 (2000 records)
+2025-12-02 14:11:07,530 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 59 (2000 records)
+2025-12-02 14:11:07,601 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 60 (2000 records)
+2025-12-02 14:11:07,676 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 61 (2000 records)
+2025-12-02 14:11:07,750 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 62 (2000 records)
+2025-12-02 14:11:07,825 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 63 (2000 records)
+2025-12-02 14:11:07,901 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 64 (2000 records)
+2025-12-02 14:11:07,979 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 65 (2000 records)
+2025-12-02 14:11:08,061 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 66 (2000 records)
+2025-12-02 14:11:08,133 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 67 (2000 records)
+2025-12-02 14:11:08,218 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 68 (2000 records)
+2025-12-02 14:11:08,377 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 69 (2000 records)
+2025-12-02 14:11:08,450 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 70 (2000 records)
+2025-12-02 14:11:08,520 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 71 (2000 records)
+2025-12-02 14:11:08,709 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 72 (2000 records)
+2025-12-02 14:11:08,783 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 73 (2000 records)
+2025-12-02 14:11:08,856 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 74 (2000 records)
+2025-12-02 14:11:08,933 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 75 (2000 records)
+2025-12-02 14:11:09,061 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 76 (2000 records)
+2025-12-02 14:11:09,140 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 77 (2000 records)
+2025-12-02 14:11:09,151 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 78 (301 records)
+2025-12-02 14:11:09,227 - app.integrations.defender.repository - INFO - Snapshot recorded successfully, snapshot ID: 10, CVE-Device records: 154301
+2025-12-02 14:11:09,252 - app.integrations.defender.sync - INFO - Snapshot created successfully with ID: 10
+2025-12-02 14:11:09,252 - app.integrations.defender.sync - INFO - Full sync completed successfully
+2025-12-02 14:11:09,252 - app.integrations.defender.sync - INFO - Full sync process completed successfully
+2025-12-02 14:11:09,256 - app.integrations.defender.sync - INFO - Database connection closed
+2025-12-02 14:11:09,256 - app.integrations.defender.sync - INFO - Vulnerability data sync completed successfully
+2025-12-02 14:39:48,033 - app.integrations.defender.sync - INFO - Starting Defender vulnerability data sync...
+2025-12-02 14:39:48,052 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-12-02 14:39:48,052 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-12-02 14:39:48,053 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-02 14:39:48,055 - app.integrations.defender.database - INFO - Successfully connected to MySQL database
+2025-12-02 14:39:48,055 - app.integrations.defender.sync - INFO - Initializing database...
+2025-12-02 14:39:48,057 - app.integrations.defender.database - INFO - sync_state table exists, checking structure...
+2025-12-02 14:39:48,057 - app.integrations.defender.database - INFO - Adding records_count column to sync_state table...
+2025-12-02 14:39:48,057 - app.integrations.defender.database - WARNING - Error adding records_count column: Unread result found
+2025-12-02 14:39:48,059 - app.integrations.defender.database - INFO - data_source column doesn't exist, no need to remove
+2025-12-02 14:39:48,061 - app.integrations.defender.database - INFO - vulnerabilities table exists, checking for autopatch_covered column...
+2025-12-02 14:39:48,063 - app.integrations.defender.database - INFO - vulnerabilities table already has autopatch_covered column
+2025-12-02 14:39:48,066 - app.integrations.defender.database - INFO - vulnerabilities already has metasploit_detected column
+2025-12-02 14:39:48,067 - app.integrations.defender.database - INFO - vulnerabilities already has nuclei_detected column
+2025-12-02 14:39:48,137 - app.integrations.defender.database - INFO - Database table structure initialized successfully
+2025-12-02 14:39:48,137 - app.integrations.defender.sync - INFO - Database initialization completed
+2025-12-02 14:39:48,137 - app.integrations.defender.sync - INFO - Starting full sync process...
+2025-12-02 14:39:48,137 - app.integrations.defender.sync - INFO - Starting full sync...
+2025-12-02 14:39:48,137 - app.integrations.defender.sync - INFO - Starting device vulnerability details full sync...
+2025-12-02 14:39:48,137 - app.integrations.defender.sync - INFO - Fetching vulnerabilities from Microsoft Defender API...
+2025-12-02 14:39:48,763 - app.integrations.defender.auth - INFO - Successfully obtained access token
+2025-12-02 14:39:48,764 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pageSize=50000
+2025-12-02 14:39:54,803 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:39:54,804 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjMsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjoxMDkyOX0=
+2025-12-02 14:40:00,451 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:40:00,451 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjozOTUyNH0=
+2025-12-02 14:40:06,437 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:40:06,438 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0Ijo4OTUyNH0=
+2025-12-02 14:40:10,569 - app.integrations.defender.api_client - INFO - Fetched 26640 records
+2025-12-02 14:40:10,569 - app.integrations.defender.api_client - INFO - Total fetched 176640 records
+2025-12-02 14:40:10,570 - app.integrations.defender.service - INFO - Successfully fetched 176640 vulnerability records
+2025-12-02 14:40:10,570 - app.integrations.defender.sync - INFO - API returned 176640 vulnerability records
+2025-12-02 14:40:10,570 - app.integrations.defender.sync - INFO - Saving 176640 vulnerability records to database...
+2025-12-02 14:40:10,570 - app.integrations.defender.repository - INFO - Starting to save 176640 vulnerability records...
+2025-12-02 14:40:10,577 - app.integrations.defender.repository - INFO - Checking if vulnerabilities table exists...
+2025-12-02 14:40:10,591 - app.integrations.defender.repository - INFO - vulnerabilities table exists
+2025-12-02 14:40:10,591 - app.integrations.defender.repository - INFO - Creating temporary table for data insertion...
+2025-12-02 14:40:10,767 - app.integrations.defender.repository - INFO - Temporary table vulnerabilities_temp created successfully
+2025-12-02 14:40:10,767 - app.integrations.defender.repository - INFO - Validating and preparing 176640 records for batch insert...
+2025-12-02 14:40:10,840 - app.integrations.defender.repository - INFO - Validated 176640 out of 176640 records
+2025-12-02 14:40:13,331 - app.integrations.defender.repository - INFO - Inserting 176640 records in batches of 2000...
+2025-12-02 14:40:13,765 - app.integrations.defender.repository - INFO - Inserted batch 1 (2000 records)
+2025-12-02 14:40:14,141 - app.integrations.defender.repository - INFO - Inserted batch 2 (2000 records)
+2025-12-02 14:40:14,523 - app.integrations.defender.repository - INFO - Inserted batch 3 (2000 records)
+2025-12-02 14:40:14,791 - app.integrations.defender.repository - INFO - Inserted batch 4 (2000 records)
+2025-12-02 14:40:15,107 - app.integrations.defender.repository - INFO - Inserted batch 5 (2000 records)
+2025-12-02 14:40:15,404 - app.integrations.defender.repository - INFO - Inserted batch 6 (2000 records)
+2025-12-02 14:40:15,701 - app.integrations.defender.repository - INFO - Inserted batch 7 (2000 records)
+2025-12-02 14:40:16,200 - app.integrations.defender.repository - INFO - Inserted batch 8 (2000 records)
+2025-12-02 14:40:16,476 - app.integrations.defender.repository - INFO - Inserted batch 9 (2000 records)
+2025-12-02 14:40:16,993 - app.integrations.defender.repository - INFO - Inserted batch 10 (2000 records)
+2025-12-02 14:40:17,285 - app.integrations.defender.repository - INFO - Inserted batch 11 (2000 records)
+2025-12-02 14:40:17,597 - app.integrations.defender.repository - INFO - Inserted batch 12 (2000 records)
+2025-12-02 14:40:17,822 - app.integrations.defender.repository - INFO - Inserted batch 13 (2000 records)
+2025-12-02 14:40:18,146 - app.integrations.defender.repository - INFO - Inserted batch 14 (2000 records)
+2025-12-02 14:40:18,380 - app.integrations.defender.repository - INFO - Inserted batch 15 (2000 records)
+2025-12-02 14:40:18,610 - app.integrations.defender.repository - INFO - Inserted batch 16 (2000 records)
+2025-12-02 14:40:18,842 - app.integrations.defender.repository - INFO - Inserted batch 17 (2000 records)
+2025-12-02 14:40:19,130 - app.integrations.defender.repository - INFO - Inserted batch 18 (2000 records)
+2025-12-02 14:40:19,357 - app.integrations.defender.repository - INFO - Inserted batch 19 (2000 records)
+2025-12-02 14:40:19,582 - app.integrations.defender.repository - INFO - Inserted batch 20 (2000 records)
+2025-12-02 14:40:19,850 - app.integrations.defender.repository - INFO - Inserted batch 21 (2000 records)
+2025-12-02 14:40:20,125 - app.integrations.defender.repository - INFO - Inserted batch 22 (2000 records)
+2025-12-02 14:40:20,451 - app.integrations.defender.repository - INFO - Inserted batch 23 (2000 records)
+2025-12-02 14:40:20,750 - app.integrations.defender.repository - INFO - Inserted batch 24 (2000 records)
+2025-12-02 14:40:21,124 - app.integrations.defender.repository - INFO - Inserted batch 25 (2000 records)
+2025-12-02 14:40:21,364 - app.integrations.defender.repository - INFO - Inserted batch 26 (2000 records)
+2025-12-02 14:40:21,613 - app.integrations.defender.repository - INFO - Inserted batch 27 (2000 records)
+2025-12-02 14:40:21,929 - app.integrations.defender.repository - INFO - Inserted batch 28 (2000 records)
+2025-12-02 14:40:22,309 - app.integrations.defender.repository - INFO - Inserted batch 29 (2000 records)
+2025-12-02 14:40:22,543 - app.integrations.defender.repository - INFO - Inserted batch 30 (2000 records)
+2025-12-02 14:40:22,806 - app.integrations.defender.repository - INFO - Inserted batch 31 (2000 records)
+2025-12-02 14:40:23,119 - app.integrations.defender.repository - INFO - Inserted batch 32 (2000 records)
+2025-12-02 14:40:23,421 - app.integrations.defender.repository - INFO - Inserted batch 33 (2000 records)
+2025-12-02 14:40:23,661 - app.integrations.defender.repository - INFO - Inserted batch 34 (2000 records)
+2025-12-02 14:40:23,885 - app.integrations.defender.repository - INFO - Inserted batch 35 (2000 records)
+2025-12-02 14:40:24,209 - app.integrations.defender.repository - INFO - Inserted batch 36 (2000 records)
+2025-12-02 14:40:24,425 - app.integrations.defender.repository - INFO - Inserted batch 37 (2000 records)
+2025-12-02 14:40:24,634 - app.integrations.defender.repository - INFO - Inserted batch 38 (2000 records)
+2025-12-02 14:40:24,858 - app.integrations.defender.repository - INFO - Inserted batch 39 (2000 records)
+2025-12-02 14:40:25,209 - app.integrations.defender.repository - INFO - Inserted batch 40 (2000 records)
+2025-12-02 14:40:25,425 - app.integrations.defender.repository - INFO - Inserted batch 41 (2000 records)
+2025-12-02 14:40:25,643 - app.integrations.defender.repository - INFO - Inserted batch 42 (2000 records)
+2025-12-02 14:40:25,882 - app.integrations.defender.repository - INFO - Inserted batch 43 (2000 records)
+2025-12-02 14:40:26,263 - app.integrations.defender.repository - INFO - Inserted batch 44 (2000 records)
+2025-12-02 14:40:26,517 - app.integrations.defender.repository - INFO - Inserted batch 45 (2000 records)
+2025-12-02 14:40:26,748 - app.integrations.defender.repository - INFO - Inserted batch 46 (2000 records)
+2025-12-02 14:40:26,980 - app.integrations.defender.repository - INFO - Inserted batch 47 (2000 records)
+2025-12-02 14:40:27,213 - app.integrations.defender.repository - INFO - Inserted batch 48 (2000 records)
+2025-12-02 14:40:27,443 - app.integrations.defender.repository - INFO - Inserted batch 49 (2000 records)
+2025-12-02 14:40:27,692 - app.integrations.defender.repository - INFO - Inserted batch 50 (2000 records)
+2025-12-02 14:40:27,931 - app.integrations.defender.repository - INFO - Inserted batch 51 (2000 records)
+2025-12-02 14:40:28,333 - app.integrations.defender.repository - INFO - Inserted batch 52 (2000 records)
+2025-12-02 14:40:28,565 - app.integrations.defender.repository - INFO - Inserted batch 53 (2000 records)
+2025-12-02 14:40:28,792 - app.integrations.defender.repository - INFO - Inserted batch 54 (2000 records)
+2025-12-02 14:40:29,099 - app.integrations.defender.repository - INFO - Inserted batch 55 (2000 records)
+2025-12-02 14:40:29,342 - app.integrations.defender.repository - INFO - Inserted batch 56 (2000 records)
+2025-12-02 14:40:29,590 - app.integrations.defender.repository - INFO - Inserted batch 57 (2000 records)
+2025-12-02 14:40:29,811 - app.integrations.defender.repository - INFO - Inserted batch 58 (2000 records)
+2025-12-02 14:40:30,085 - app.integrations.defender.repository - INFO - Inserted batch 59 (2000 records)
+2025-12-02 14:40:30,381 - app.integrations.defender.repository - INFO - Inserted batch 60 (2000 records)
+2025-12-02 14:40:30,626 - app.integrations.defender.repository - INFO - Inserted batch 61 (2000 records)
+2025-12-02 14:40:30,866 - app.integrations.defender.repository - INFO - Inserted batch 62 (2000 records)
+2025-12-02 14:40:31,272 - app.integrations.defender.repository - INFO - Inserted batch 63 (2000 records)
+2025-12-02 14:40:31,546 - app.integrations.defender.repository - INFO - Inserted batch 64 (2000 records)
+2025-12-02 14:40:31,779 - app.integrations.defender.repository - INFO - Inserted batch 65 (2000 records)
+2025-12-02 14:40:32,065 - app.integrations.defender.repository - INFO - Inserted batch 66 (2000 records)
+2025-12-02 14:40:32,303 - app.integrations.defender.repository - INFO - Inserted batch 67 (2000 records)
+2025-12-02 14:40:32,527 - app.integrations.defender.repository - INFO - Inserted batch 68 (2000 records)
+2025-12-02 14:40:32,818 - app.integrations.defender.repository - INFO - Inserted batch 69 (2000 records)
+2025-12-02 14:40:33,122 - app.integrations.defender.repository - INFO - Inserted batch 70 (2000 records)
+2025-12-02 14:40:33,385 - app.integrations.defender.repository - INFO - Inserted batch 71 (2000 records)
+2025-12-02 14:40:33,627 - app.integrations.defender.repository - INFO - Inserted batch 72 (2000 records)
+2025-12-02 14:40:33,876 - app.integrations.defender.repository - INFO - Inserted batch 73 (2000 records)
+2025-12-02 14:40:34,153 - app.integrations.defender.repository - INFO - Inserted batch 74 (2000 records)
+2025-12-02 14:40:34,462 - app.integrations.defender.repository - INFO - Inserted batch 75 (2000 records)
+2025-12-02 14:40:34,693 - app.integrations.defender.repository - INFO - Inserted batch 76 (2000 records)
+2025-12-02 14:40:34,995 - app.integrations.defender.repository - INFO - Inserted batch 77 (2000 records)
+2025-12-02 14:40:35,369 - app.integrations.defender.repository - INFO - Inserted batch 78 (2000 records)
+2025-12-02 14:40:35,623 - app.integrations.defender.repository - INFO - Inserted batch 79 (2000 records)
+2025-12-02 14:40:35,859 - app.integrations.defender.repository - INFO - Inserted batch 80 (2000 records)
+2025-12-02 14:40:36,168 - app.integrations.defender.repository - INFO - Inserted batch 81 (2000 records)
+2025-12-02 14:40:36,468 - app.integrations.defender.repository - INFO - Inserted batch 82 (2000 records)
+2025-12-02 14:40:36,737 - app.integrations.defender.repository - INFO - Inserted batch 83 (2000 records)
+2025-12-02 14:40:37,155 - app.integrations.defender.repository - INFO - Inserted batch 84 (2000 records)
+2025-12-02 14:40:37,432 - app.integrations.defender.repository - INFO - Inserted batch 85 (2000 records)
+2025-12-02 14:40:37,722 - app.integrations.defender.repository - INFO - Inserted batch 86 (2000 records)
+2025-12-02 14:40:37,970 - app.integrations.defender.repository - INFO - Inserted batch 87 (2000 records)
+2025-12-02 14:40:38,312 - app.integrations.defender.repository - INFO - Inserted batch 88 (2000 records)
+2025-12-02 14:40:38,429 - app.integrations.defender.repository - INFO - Inserted batch 89 (640 records)
+2025-12-02 14:40:38,746 - app.integrations.defender.repository - INFO - Successfully inserted 176640 records into temporary table
+2025-12-02 14:40:38,747 - app.integrations.defender.repository - INFO - Switching tables atomically...
+2025-12-02 14:40:38,833 - app.integrations.defender.repository - INFO - Renamed vulnerabilities to vulnerabilities_old
+2025-12-02 14:40:38,863 - app.integrations.defender.repository - INFO - Renamed vulnerabilities_temp to vulnerabilities
+2025-12-02 14:40:38,896 - app.integrations.defender.repository - INFO - Dropped old table vulnerabilities_old
+2025-12-02 14:40:38,897 - app.integrations.defender.repository - INFO - Verifying data was saved correctly...
+2025-12-02 14:40:38,942 - app.integrations.defender.repository - INFO - Verification: 176640 records found in vulnerabilities table
+2025-12-02 14:40:38,943 - app.integrations.defender.repository - INFO - Data verification successful: 176640 records match expected count
+2025-12-02 14:40:38,943 - app.integrations.defender.repository - INFO - Successfully saved 176640 vulnerability records using table switching method
+2025-12-02 14:40:39,098 - app.integrations.defender.sync - INFO - Database verification: 176640 records in database after save
+2025-12-02 14:40:39,098 - app.integrations.defender.sync - INFO - Device vulnerability details full sync completed, fetched 176640 records, saved 176640 records
+2025-12-02 14:40:39,112 - app.integrations.defender.repository - INFO - Sync time updated successfully: 2025-12-02 14:40:39.098234, type: full, records: 176640
+2025-12-02 14:40:39,112 - app.integrations.defender.sync - INFO - Sync time recorded: 2025-12-02 14:40:39.098234, records: 176640
+2025-12-02 14:40:39,215 - app.integrations.defender.sync - INFO - Starting vulnerability catalog sync...
+2025-12-02 14:40:39,215 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=200
+2025-12-02 14:41:07,252 - app.integrations.defender.api_client - INFO - Fetched 200 catalog records
+2025-12-02 14:41:07,253 - app.integrations.defender.api_client - INFO - Total fetched 200 vulnerability catalog records
+2025-12-02 14:41:07,254 - app.integrations.defender.service - INFO - Successfully fetched 200 catalog records
+2025-12-02 14:41:07,254 - app.integrations.defender.sync - INFO - Catalog API returned 200 records
+2025-12-02 14:41:07,381 - app.integrations.defender.repository - INFO - Saved/updated 200 catalog records
+2025-12-02 14:41:07,385 - app.integrations.defender.sync - INFO - Catalog sync completed, 200 records saved
+2025-12-02 14:41:07,386 - app.integrations.defender.sync - INFO - Creating snapshot after sync...
+2025-12-02 14:41:09,210 - app.integrations.defender.repository - INFO - Recording CVE-Device combinations for snapshot (deduplicating by CVE-Device)...
+2025-12-02 14:41:11,541 - app.integrations.defender.repository - INFO - Found 154301 unique CVE-Device combinations after deduplication
+2025-12-02 14:41:11,988 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 1 (2000 records)
+2025-12-02 14:41:12,167 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 2 (2000 records)
+2025-12-02 14:41:12,414 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 3 (2000 records)
+2025-12-02 14:41:12,503 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 4 (2000 records)
+2025-12-02 14:41:12,591 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 5 (2000 records)
+2025-12-02 14:41:12,683 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 6 (2000 records)
+2025-12-02 14:41:12,809 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 7 (2000 records)
+2025-12-02 14:41:12,960 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 8 (2000 records)
+2025-12-02 14:41:13,074 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 9 (2000 records)
+2025-12-02 14:41:13,190 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 10 (2000 records)
+2025-12-02 14:41:13,356 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 11 (2000 records)
+2025-12-02 14:41:13,456 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 12 (2000 records)
+2025-12-02 14:41:13,632 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 13 (2000 records)
+2025-12-02 14:41:13,726 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 14 (2000 records)
+2025-12-02 14:41:13,817 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 15 (2000 records)
+2025-12-02 14:41:13,899 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 16 (2000 records)
+2025-12-02 14:41:13,980 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 17 (2000 records)
+2025-12-02 14:41:14,061 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 18 (2000 records)
+2025-12-02 14:41:14,141 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 19 (2000 records)
+2025-12-02 14:41:14,260 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 20 (2000 records)
+2025-12-02 14:41:14,395 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 21 (2000 records)
+2025-12-02 14:41:14,483 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 22 (2000 records)
+2025-12-02 14:41:14,573 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 23 (2000 records)
+2025-12-02 14:41:14,655 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 24 (2000 records)
+2025-12-02 14:41:14,727 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 25 (2000 records)
+2025-12-02 14:41:14,801 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 26 (2000 records)
+2025-12-02 14:41:14,889 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 27 (2000 records)
+2025-12-02 14:41:14,974 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 28 (2000 records)
+2025-12-02 14:41:15,045 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 29 (2000 records)
+2025-12-02 14:41:15,137 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 30 (2000 records)
+2025-12-02 14:41:15,248 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 31 (2000 records)
+2025-12-02 14:41:15,464 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 32 (2000 records)
+2025-12-02 14:41:15,553 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 33 (2000 records)
+2025-12-02 14:41:15,633 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 34 (2000 records)
+2025-12-02 14:41:15,761 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 35 (2000 records)
+2025-12-02 14:41:15,836 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 36 (2000 records)
+2025-12-02 14:41:15,912 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 37 (2000 records)
+2025-12-02 14:41:15,990 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 38 (2000 records)
+2025-12-02 14:41:16,064 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 39 (2000 records)
+2025-12-02 14:41:16,137 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 40 (2000 records)
+2025-12-02 14:41:16,331 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 41 (2000 records)
+2025-12-02 14:41:16,405 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 42 (2000 records)
+2025-12-02 14:41:16,482 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 43 (2000 records)
+2025-12-02 14:41:16,549 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 44 (2000 records)
+2025-12-02 14:41:16,622 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 45 (2000 records)
+2025-12-02 14:41:16,694 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 46 (2000 records)
+2025-12-02 14:41:16,769 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 47 (2000 records)
+2025-12-02 14:41:16,845 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 48 (2000 records)
+2025-12-02 14:41:16,915 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 49 (2000 records)
+2025-12-02 14:41:16,989 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 50 (2000 records)
+2025-12-02 14:41:17,069 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 51 (2000 records)
+2025-12-02 14:41:17,145 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 52 (2000 records)
+2025-12-02 14:41:17,342 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 53 (2000 records)
+2025-12-02 14:41:17,448 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 54 (2000 records)
+2025-12-02 14:41:17,524 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 55 (2000 records)
+2025-12-02 14:41:17,595 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 56 (2000 records)
+2025-12-02 14:41:17,672 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 57 (2000 records)
+2025-12-02 14:41:17,748 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 58 (2000 records)
+2025-12-02 14:41:17,822 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 59 (2000 records)
+2025-12-02 14:41:17,897 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 60 (2000 records)
+2025-12-02 14:41:17,971 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 61 (2000 records)
+2025-12-02 14:41:18,047 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 62 (2000 records)
+2025-12-02 14:41:18,118 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 63 (2000 records)
+2025-12-02 14:41:18,195 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 64 (2000 records)
+2025-12-02 14:41:18,378 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 65 (2000 records)
+2025-12-02 14:41:18,453 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 66 (2000 records)
+2025-12-02 14:41:18,525 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 67 (2000 records)
+2025-12-02 14:41:18,611 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 68 (2000 records)
+2025-12-02 14:41:18,684 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 69 (2000 records)
+2025-12-02 14:41:18,765 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 70 (2000 records)
+2025-12-02 14:41:18,836 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 71 (2000 records)
+2025-12-02 14:41:18,910 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 72 (2000 records)
+2025-12-02 14:41:18,982 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 73 (2000 records)
+2025-12-02 14:41:19,056 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 74 (2000 records)
+2025-12-02 14:41:19,132 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 75 (2000 records)
+2025-12-02 14:41:19,299 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 76 (2000 records)
+2025-12-02 14:41:19,377 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 77 (2000 records)
+2025-12-02 14:41:19,389 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 78 (301 records)
+2025-12-02 14:41:19,446 - app.integrations.defender.repository - INFO - Snapshot recorded successfully, snapshot ID: 11, CVE-Device records: 154301
+2025-12-02 14:41:19,478 - app.integrations.defender.sync - INFO - Snapshot created successfully with ID: 11
+2025-12-02 14:41:19,478 - app.integrations.defender.sync - INFO - Full sync completed successfully
+2025-12-02 14:41:19,478 - app.integrations.defender.sync - INFO - Full sync process completed successfully
+2025-12-02 14:41:19,480 - app.integrations.defender.sync - INFO - Database connection closed
+2025-12-02 14:41:19,480 - app.integrations.defender.sync - INFO - Vulnerability data sync completed successfully
+2025-12-02 14:48:49,356 - app.integrations.defender.sync - INFO - Starting Defender vulnerability data sync...
+2025-12-02 14:48:49,404 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-12-02 14:48:49,404 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-12-02 14:48:49,404 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-02 14:48:49,411 - app.integrations.defender.database - INFO - Successfully connected to MySQL database
+2025-12-02 14:48:49,411 - app.integrations.defender.sync - INFO - Initializing database...
+2025-12-02 14:48:49,417 - app.integrations.defender.database - INFO - sync_state table exists, checking structure...
+2025-12-02 14:48:49,417 - app.integrations.defender.database - INFO - Adding records_count column to sync_state table...
+2025-12-02 14:48:49,417 - app.integrations.defender.database - WARNING - Error adding records_count column: Unread result found
+2025-12-02 14:48:49,420 - app.integrations.defender.database - INFO - data_source column doesn't exist, no need to remove
+2025-12-02 14:48:49,421 - app.integrations.defender.database - INFO - vulnerabilities table exists, checking for autopatch_covered column...
+2025-12-02 14:48:49,421 - app.integrations.defender.database - INFO - vulnerabilities table already has autopatch_covered column
+2025-12-02 14:48:49,422 - app.integrations.defender.database - INFO - vulnerabilities already has metasploit_detected column
+2025-12-02 14:48:49,423 - app.integrations.defender.database - INFO - vulnerabilities already has nuclei_detected column
+2025-12-02 14:48:49,502 - app.integrations.defender.database - INFO - Database table structure initialized successfully
+2025-12-02 14:48:49,502 - app.integrations.defender.sync - INFO - Database initialization completed
+2025-12-02 14:48:49,502 - app.integrations.defender.sync - INFO - Starting full sync process...
+2025-12-02 14:48:49,502 - app.integrations.defender.sync - INFO - Starting full sync...
+2025-12-02 14:48:49,502 - app.integrations.defender.sync - INFO - Starting device vulnerability details full sync...
+2025-12-02 14:48:49,502 - app.integrations.defender.sync - INFO - Fetching vulnerabilities from Microsoft Defender API...
+2025-12-02 14:48:50,177 - app.integrations.defender.auth - INFO - Successfully obtained access token
+2025-12-02 14:48:50,177 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pageSize=50000
+2025-12-02 14:48:56,154 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:48:56,155 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjMsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjoxMDkyOX0=
+2025-12-02 14:49:01,524 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:49:01,524 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjozOTUyNH0=
+2025-12-02 14:49:07,023 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:49:07,024 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0Ijo4OTUyNH0=
+2025-12-02 14:49:10,945 - app.integrations.defender.api_client - INFO - Fetched 26640 records
+2025-12-02 14:49:10,946 - app.integrations.defender.api_client - INFO - Total fetched 176640 records
+2025-12-02 14:49:10,946 - app.integrations.defender.service - INFO - Successfully fetched 176640 vulnerability records
+2025-12-02 14:49:10,946 - app.integrations.defender.sync - INFO - API returned 176640 vulnerability records
+2025-12-02 14:49:10,946 - app.integrations.defender.sync - INFO - Saving 176640 vulnerability records to database...
+2025-12-02 14:49:10,946 - app.integrations.defender.repository - INFO - Starting to save 176640 vulnerability records...
+2025-12-02 14:49:10,956 - app.integrations.defender.repository - INFO - Checking if vulnerabilities table exists...
+2025-12-02 14:49:10,964 - app.integrations.defender.repository - INFO - vulnerabilities table exists
+2025-12-02 14:49:10,964 - app.integrations.defender.repository - INFO - Creating temporary table for data insertion...
+2025-12-02 14:49:11,204 - app.integrations.defender.repository - INFO - Temporary table vulnerabilities_temp created successfully
+2025-12-02 14:49:11,204 - app.integrations.defender.repository - INFO - Validating and preparing 176640 records for batch insert...
+2025-12-02 14:49:11,294 - app.integrations.defender.repository - INFO - Validated 176640 out of 176640 records
+2025-12-02 14:49:13,950 - app.integrations.defender.repository - INFO - Inserting 176640 records in batches of 2000...
+2025-12-02 14:49:14,381 - app.integrations.defender.repository - INFO - Inserted batch 1 (2000 records)
+2025-12-02 14:49:14,664 - app.integrations.defender.repository - INFO - Inserted batch 2 (2000 records)
+2025-12-02 14:49:14,935 - app.integrations.defender.repository - INFO - Inserted batch 3 (2000 records)
+2025-12-02 14:49:15,175 - app.integrations.defender.repository - INFO - Inserted batch 4 (2000 records)
+2025-12-02 14:49:15,388 - app.integrations.defender.repository - INFO - Inserted batch 5 (2000 records)
+2025-12-02 14:49:15,703 - app.integrations.defender.repository - INFO - Inserted batch 6 (2000 records)
+2025-12-02 14:49:15,924 - app.integrations.defender.repository - INFO - Inserted batch 7 (2000 records)
+2025-12-02 14:49:16,142 - app.integrations.defender.repository - INFO - Inserted batch 8 (2000 records)
+2025-12-02 14:49:16,365 - app.integrations.defender.repository - INFO - Inserted batch 9 (2000 records)
+2025-12-02 14:49:16,643 - app.integrations.defender.repository - INFO - Inserted batch 10 (2000 records)
+2025-12-02 14:49:16,881 - app.integrations.defender.repository - INFO - Inserted batch 11 (2000 records)
+2025-12-02 14:49:17,123 - app.integrations.defender.repository - INFO - Inserted batch 12 (2000 records)
+2025-12-02 14:49:17,348 - app.integrations.defender.repository - INFO - Inserted batch 13 (2000 records)
+2025-12-02 14:49:17,636 - app.integrations.defender.repository - INFO - Inserted batch 14 (2000 records)
+2025-12-02 14:49:17,848 - app.integrations.defender.repository - INFO - Inserted batch 15 (2000 records)
+2025-12-02 14:49:18,075 - app.integrations.defender.repository - INFO - Inserted batch 16 (2000 records)
+2025-12-02 14:49:18,298 - app.integrations.defender.repository - INFO - Inserted batch 17 (2000 records)
+2025-12-02 14:49:18,712 - app.integrations.defender.repository - INFO - Inserted batch 18 (2000 records)
+2025-12-02 14:49:18,923 - app.integrations.defender.repository - INFO - Inserted batch 19 (2000 records)
+2025-12-02 14:49:19,132 - app.integrations.defender.repository - INFO - Inserted batch 20 (2000 records)
+2025-12-02 14:49:19,378 - app.integrations.defender.repository - INFO - Inserted batch 21 (2000 records)
+2025-12-02 14:49:19,693 - app.integrations.defender.repository - INFO - Inserted batch 22 (2000 records)
+2025-12-02 14:49:19,966 - app.integrations.defender.repository - INFO - Inserted batch 23 (2000 records)
+2025-12-02 14:49:20,192 - app.integrations.defender.repository - INFO - Inserted batch 24 (2000 records)
+2025-12-02 14:49:20,480 - app.integrations.defender.repository - INFO - Inserted batch 25 (2000 records)
+2025-12-02 14:49:20,701 - app.integrations.defender.repository - INFO - Inserted batch 26 (2000 records)
+2025-12-02 14:49:20,953 - app.integrations.defender.repository - INFO - Inserted batch 27 (2000 records)
+2025-12-02 14:49:21,181 - app.integrations.defender.repository - INFO - Inserted batch 28 (2000 records)
+2025-12-02 14:49:21,413 - app.integrations.defender.repository - INFO - Inserted batch 29 (2000 records)
+2025-12-02 14:49:21,760 - app.integrations.defender.repository - INFO - Inserted batch 30 (2000 records)
+2025-12-02 14:49:21,977 - app.integrations.defender.repository - INFO - Inserted batch 31 (2000 records)
+2025-12-02 14:49:22,203 - app.integrations.defender.repository - INFO - Inserted batch 32 (2000 records)
+2025-12-02 14:49:22,419 - app.integrations.defender.repository - INFO - Inserted batch 33 (2000 records)
+2025-12-02 14:49:22,755 - app.integrations.defender.repository - INFO - Inserted batch 34 (2000 records)
+2025-12-02 14:49:22,972 - app.integrations.defender.repository - INFO - Inserted batch 35 (2000 records)
+2025-12-02 14:49:23,200 - app.integrations.defender.repository - INFO - Inserted batch 36 (2000 records)
+2025-12-02 14:49:23,418 - app.integrations.defender.repository - INFO - Inserted batch 37 (2000 records)
+2025-12-02 14:49:23,717 - app.integrations.defender.repository - INFO - Inserted batch 38 (2000 records)
+2025-12-02 14:49:23,947 - app.integrations.defender.repository - INFO - Inserted batch 39 (2000 records)
+2025-12-02 14:49:24,189 - app.integrations.defender.repository - INFO - Inserted batch 40 (2000 records)
+2025-12-02 14:49:24,408 - app.integrations.defender.repository - INFO - Inserted batch 41 (2000 records)
+2025-12-02 14:49:24,723 - app.integrations.defender.repository - INFO - Inserted batch 42 (2000 records)
+2025-12-02 14:49:24,945 - app.integrations.defender.repository - INFO - Inserted batch 43 (2000 records)
+2025-12-02 14:49:25,155 - app.integrations.defender.repository - INFO - Inserted batch 44 (2000 records)
+2025-12-02 14:49:25,374 - app.integrations.defender.repository - INFO - Inserted batch 45 (2000 records)
+2025-12-02 14:49:25,759 - app.integrations.defender.repository - INFO - Inserted batch 46 (2000 records)
+2025-12-02 14:49:26,012 - app.integrations.defender.repository - INFO - Inserted batch 47 (2000 records)
+2025-12-02 14:49:26,241 - app.integrations.defender.repository - INFO - Inserted batch 48 (2000 records)
+2025-12-02 14:49:26,483 - app.integrations.defender.repository - INFO - Inserted batch 49 (2000 records)
+2025-12-02 14:49:26,845 - app.integrations.defender.repository - INFO - Inserted batch 50 (2000 records)
+2025-12-02 14:49:27,119 - app.integrations.defender.repository - INFO - Inserted batch 51 (2000 records)
+2025-12-02 14:49:27,348 - app.integrations.defender.repository - INFO - Inserted batch 52 (2000 records)
+2025-12-02 14:49:27,713 - app.integrations.defender.repository - INFO - Inserted batch 53 (2000 records)
+2025-12-02 14:49:27,940 - app.integrations.defender.repository - INFO - Inserted batch 54 (2000 records)
+2025-12-02 14:49:28,168 - app.integrations.defender.repository - INFO - Inserted batch 55 (2000 records)
+2025-12-02 14:49:28,386 - app.integrations.defender.repository - INFO - Inserted batch 56 (2000 records)
+2025-12-02 14:49:28,656 - app.integrations.defender.repository - INFO - Inserted batch 57 (2000 records)
+2025-12-02 14:49:28,924 - app.integrations.defender.repository - INFO - Inserted batch 58 (2000 records)
+2025-12-02 14:49:29,147 - app.integrations.defender.repository - INFO - Inserted batch 59 (2000 records)
+2025-12-02 14:49:29,394 - app.integrations.defender.repository - INFO - Inserted batch 60 (2000 records)
+2025-12-02 14:49:29,659 - app.integrations.defender.repository - INFO - Inserted batch 61 (2000 records)
+2025-12-02 14:49:30,002 - app.integrations.defender.repository - INFO - Inserted batch 62 (2000 records)
+2025-12-02 14:49:30,232 - app.integrations.defender.repository - INFO - Inserted batch 63 (2000 records)
+2025-12-02 14:49:30,459 - app.integrations.defender.repository - INFO - Inserted batch 64 (2000 records)
+2025-12-02 14:49:30,818 - app.integrations.defender.repository - INFO - Inserted batch 65 (2000 records)
+2025-12-02 14:49:31,059 - app.integrations.defender.repository - INFO - Inserted batch 66 (2000 records)
+2025-12-02 14:49:31,292 - app.integrations.defender.repository - INFO - Inserted batch 67 (2000 records)
+2025-12-02 14:49:31,520 - app.integrations.defender.repository - INFO - Inserted batch 68 (2000 records)
+2025-12-02 14:49:31,799 - app.integrations.defender.repository - INFO - Inserted batch 69 (2000 records)
+2025-12-02 14:49:32,101 - app.integrations.defender.repository - INFO - Inserted batch 70 (2000 records)
+2025-12-02 14:49:32,318 - app.integrations.defender.repository - INFO - Inserted batch 71 (2000 records)
+2025-12-02 14:49:32,614 - app.integrations.defender.repository - INFO - Inserted batch 72 (2000 records)
+2025-12-02 14:49:32,846 - app.integrations.defender.repository - INFO - Inserted batch 73 (2000 records)
+2025-12-02 14:49:33,132 - app.integrations.defender.repository - INFO - Inserted batch 74 (2000 records)
+2025-12-02 14:49:33,364 - app.integrations.defender.repository - INFO - Inserted batch 75 (2000 records)
+2025-12-02 14:49:33,624 - app.integrations.defender.repository - INFO - Inserted batch 76 (2000 records)
+2025-12-02 14:49:33,902 - app.integrations.defender.repository - INFO - Inserted batch 77 (2000 records)
+2025-12-02 14:49:34,152 - app.integrations.defender.repository - INFO - Inserted batch 78 (2000 records)
+2025-12-02 14:49:34,503 - app.integrations.defender.repository - INFO - Inserted batch 79 (2000 records)
+2025-12-02 14:49:34,811 - app.integrations.defender.repository - INFO - Inserted batch 80 (2000 records)
+2025-12-02 14:49:35,187 - app.integrations.defender.repository - INFO - Inserted batch 81 (2000 records)
+2025-12-02 14:49:35,405 - app.integrations.defender.repository - INFO - Inserted batch 82 (2000 records)
+2025-12-02 14:49:35,754 - app.integrations.defender.repository - INFO - Inserted batch 83 (2000 records)
+2025-12-02 14:49:35,979 - app.integrations.defender.repository - INFO - Inserted batch 84 (2000 records)
+2025-12-02 14:49:36,250 - app.integrations.defender.repository - INFO - Inserted batch 85 (2000 records)
+2025-12-02 14:49:36,542 - app.integrations.defender.repository - INFO - Inserted batch 86 (2000 records)
+2025-12-02 14:49:36,916 - app.integrations.defender.repository - INFO - Inserted batch 87 (2000 records)
+2025-12-02 14:49:37,172 - app.integrations.defender.repository - INFO - Inserted batch 88 (2000 records)
+2025-12-02 14:49:37,337 - app.integrations.defender.repository - INFO - Inserted batch 89 (640 records)
+2025-12-02 14:49:37,627 - app.integrations.defender.repository - INFO - Successfully inserted 176640 records into temporary table
+2025-12-02 14:49:37,628 - app.integrations.defender.repository - INFO - Switching tables atomically...
+2025-12-02 14:49:37,814 - app.integrations.defender.repository - INFO - Renamed vulnerabilities to vulnerabilities_old
+2025-12-02 14:49:37,855 - app.integrations.defender.repository - INFO - Renamed vulnerabilities_temp to vulnerabilities
+2025-12-02 14:49:37,904 - app.integrations.defender.repository - INFO - Dropped old table vulnerabilities_old
+2025-12-02 14:49:37,905 - app.integrations.defender.repository - INFO - Verifying data was saved correctly...
+2025-12-02 14:49:37,958 - app.integrations.defender.repository - INFO - Verification: 176640 records found in vulnerabilities table
+2025-12-02 14:49:37,958 - app.integrations.defender.repository - INFO - Data verification successful: 176640 records match expected count
+2025-12-02 14:49:37,958 - app.integrations.defender.repository - INFO - Successfully saved 176640 vulnerability records using table switching method
+2025-12-02 14:49:38,133 - app.integrations.defender.sync - INFO - Database verification: 176640 records in database after save
+2025-12-02 14:49:38,133 - app.integrations.defender.sync - INFO - Device vulnerability details full sync completed, fetched 176640 records, saved 176640 records
+2025-12-02 14:49:38,141 - app.integrations.defender.repository - INFO - Sync time updated successfully: 2025-12-02 14:49:38.133288, type: full, records: 176640
+2025-12-02 14:49:38,142 - app.integrations.defender.sync - INFO - Sync time recorded: 2025-12-02 14:49:38.133288, records: 176640
+2025-12-02 14:49:38,253 - app.integrations.defender.sync - INFO - Starting vulnerability catalog sync...
+2025-12-02 14:49:38,253 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=0
+2025-12-02 14:49:45,908 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=0)
+2025-12-02 14:49:45,908 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=8000
+2025-12-02 14:49:53,917 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=8000)
+2025-12-02 14:49:53,917 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=16000
+2025-12-02 14:50:02,750 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=16000)
+2025-12-02 14:50:02,750 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=24000
+2025-12-02 14:50:10,311 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=24000)
+2025-12-02 14:50:10,311 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=32000
+2025-12-02 14:50:19,528 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=32000)
+2025-12-02 14:50:19,528 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=40000
+2025-12-02 14:50:26,991 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=40000)
+2025-12-02 14:50:26,991 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=48000
+2025-12-02 14:50:34,535 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=48000)
+2025-12-02 14:50:34,536 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=56000
+2025-12-02 14:50:43,090 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=56000)
+2025-12-02 14:50:43,090 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=64000
+2025-12-02 14:50:51,761 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=64000)
+2025-12-02 14:50:51,761 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=72000
+2025-12-02 14:50:58,905 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=72000)
+2025-12-02 14:50:58,905 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=80000
+2025-12-02 14:51:07,102 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=80000)
+2025-12-02 14:51:07,103 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=88000
+2025-12-02 14:51:11,853 - app.integrations.defender.sync - INFO - Database connection closed
+2025-12-02 14:55:04,147 - app.integrations.defender.sync - INFO - Starting Defender vulnerability data sync...
+2025-12-02 14:55:04,199 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-12-02 14:55:04,199 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-12-02 14:55:04,199 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-02 14:55:04,206 - app.integrations.defender.database - INFO - Successfully connected to MySQL database
+2025-12-02 14:55:04,206 - app.integrations.defender.sync - INFO - Initializing database...
+2025-12-02 14:55:04,210 - app.integrations.defender.database - INFO - sync_state table exists, checking structure...
+2025-12-02 14:55:04,210 - app.integrations.defender.database - INFO - Adding records_count column to sync_state table...
+2025-12-02 14:55:04,210 - app.integrations.defender.database - WARNING - Error adding records_count column: Unread result found
+2025-12-02 14:55:04,212 - app.integrations.defender.database - INFO - data_source column doesn't exist, no need to remove
+2025-12-02 14:55:04,215 - app.integrations.defender.database - INFO - vulnerabilities table exists, checking for autopatch_covered column...
+2025-12-02 14:55:04,215 - app.integrations.defender.database - INFO - vulnerabilities table already has autopatch_covered column
+2025-12-02 14:55:04,216 - app.integrations.defender.database - INFO - vulnerabilities already has metasploit_detected column
+2025-12-02 14:55:04,217 - app.integrations.defender.database - INFO - vulnerabilities already has nuclei_detected column
+2025-12-02 14:55:04,268 - app.integrations.defender.database - INFO - Database table structure initialized successfully
+2025-12-02 14:55:04,268 - app.integrations.defender.sync - INFO - Database initialization completed
+2025-12-02 14:55:04,268 - app.integrations.defender.sync - INFO - Starting full sync process...
+2025-12-02 14:55:04,268 - app.integrations.defender.sync - INFO - Starting full sync...
+2025-12-02 14:55:04,268 - app.integrations.defender.sync - INFO - Starting device vulnerability details full sync...
+2025-12-02 14:55:04,268 - app.integrations.defender.sync - INFO - Fetching vulnerabilities from Microsoft Defender API...
+2025-12-02 14:55:04,876 - app.integrations.defender.auth - INFO - Successfully obtained access token
+2025-12-02 14:55:04,876 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pageSize=50000
+2025-12-02 14:55:10,572 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:55:10,572 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjMsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjoxMDkyOX0=
+2025-12-02 14:55:16,196 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:55:16,197 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjozOTUyNH0=
+2025-12-02 14:55:22,753 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 14:55:22,754 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0Ijo4OTUyNH0=
+2025-12-02 14:55:26,437 - app.integrations.defender.api_client - INFO - Fetched 26640 records
+2025-12-02 14:55:26,437 - app.integrations.defender.api_client - INFO - Total fetched 176640 records
+2025-12-02 14:55:26,438 - app.integrations.defender.service - INFO - Successfully fetched 176640 vulnerability records
+2025-12-02 14:55:26,438 - app.integrations.defender.sync - INFO - API returned 176640 vulnerability records
+2025-12-02 14:55:26,438 - app.integrations.defender.sync - INFO - Saving 176640 vulnerability records to database...
+2025-12-02 14:55:26,438 - app.integrations.defender.repository - INFO - Starting to save 176640 vulnerability records...
+2025-12-02 14:55:26,439 - app.integrations.defender.repository - INFO - Checking if vulnerabilities table exists...
+2025-12-02 14:55:26,441 - app.integrations.defender.repository - INFO - vulnerabilities table exists
+2025-12-02 14:55:26,441 - app.integrations.defender.repository - INFO - Creating temporary table for data insertion...
+2025-12-02 14:55:26,646 - app.integrations.defender.repository - INFO - Temporary table vulnerabilities_temp created successfully
+2025-12-02 14:55:26,646 - app.integrations.defender.repository - INFO - Validating and preparing 176640 records for batch insert...
+2025-12-02 14:55:26,727 - app.integrations.defender.repository - INFO - Validated 176640 out of 176640 records
+2025-12-02 14:55:30,023 - app.integrations.defender.repository - INFO - Inserting 176640 records in batches of 2000...
+2025-12-02 14:55:30,475 - app.integrations.defender.repository - INFO - Inserted batch 1 (2000 records)
+2025-12-02 14:55:30,716 - app.integrations.defender.repository - INFO - Inserted batch 2 (2000 records)
+2025-12-02 14:55:30,951 - app.integrations.defender.repository - INFO - Inserted batch 3 (2000 records)
+2025-12-02 14:55:31,162 - app.integrations.defender.repository - INFO - Inserted batch 4 (2000 records)
+2025-12-02 14:55:31,377 - app.integrations.defender.repository - INFO - Inserted batch 5 (2000 records)
+2025-12-02 14:55:31,807 - app.integrations.defender.repository - INFO - Inserted batch 6 (2000 records)
+2025-12-02 14:55:32,060 - app.integrations.defender.repository - INFO - Inserted batch 7 (2000 records)
+2025-12-02 14:55:32,318 - app.integrations.defender.repository - INFO - Inserted batch 8 (2000 records)
+2025-12-02 14:55:32,698 - app.integrations.defender.repository - INFO - Inserted batch 9 (2000 records)
+2025-12-02 14:55:32,938 - app.integrations.defender.repository - INFO - Inserted batch 10 (2000 records)
+2025-12-02 14:55:33,267 - app.integrations.defender.repository - INFO - Inserted batch 11 (2000 records)
+2025-12-02 14:55:33,581 - app.integrations.defender.repository - INFO - Inserted batch 12 (2000 records)
+2025-12-02 14:55:33,798 - app.integrations.defender.repository - INFO - Inserted batch 13 (2000 records)
+2025-12-02 14:55:34,017 - app.integrations.defender.repository - INFO - Inserted batch 14 (2000 records)
+2025-12-02 14:55:34,241 - app.integrations.defender.repository - INFO - Inserted batch 15 (2000 records)
+2025-12-02 14:55:34,477 - app.integrations.defender.repository - INFO - Inserted batch 16 (2000 records)
+2025-12-02 14:55:34,859 - app.integrations.defender.repository - INFO - Inserted batch 17 (2000 records)
+2025-12-02 14:55:35,095 - app.integrations.defender.repository - INFO - Inserted batch 18 (2000 records)
+2025-12-02 14:55:35,293 - app.integrations.defender.repository - INFO - Inserted batch 19 (2000 records)
+2025-12-02 14:55:35,520 - app.integrations.defender.repository - INFO - Inserted batch 20 (2000 records)
+2025-12-02 14:55:35,805 - app.integrations.defender.repository - INFO - Inserted batch 21 (2000 records)
+2025-12-02 14:55:36,012 - app.integrations.defender.repository - INFO - Inserted batch 22 (2000 records)
+2025-12-02 14:55:36,309 - app.integrations.defender.repository - INFO - Inserted batch 23 (2000 records)
+2025-12-02 14:55:36,809 - app.integrations.defender.repository - INFO - Inserted batch 24 (2000 records)
+2025-12-02 14:55:37,075 - app.integrations.defender.repository - INFO - Inserted batch 25 (2000 records)
+2025-12-02 14:55:37,327 - app.integrations.defender.repository - INFO - Inserted batch 26 (2000 records)
+2025-12-02 14:55:37,630 - app.integrations.defender.repository - INFO - Inserted batch 27 (2000 records)
+2025-12-02 14:55:37,889 - app.integrations.defender.repository - INFO - Inserted batch 28 (2000 records)
+2025-12-02 14:55:38,127 - app.integrations.defender.repository - INFO - Inserted batch 29 (2000 records)
+2025-12-02 14:55:38,371 - app.integrations.defender.repository - INFO - Inserted batch 30 (2000 records)
+2025-12-02 14:55:38,606 - app.integrations.defender.repository - INFO - Inserted batch 31 (2000 records)
+2025-12-02 14:55:38,964 - app.integrations.defender.repository - INFO - Inserted batch 32 (2000 records)
+2025-12-02 14:55:39,179 - app.integrations.defender.repository - INFO - Inserted batch 33 (2000 records)
+2025-12-02 14:55:39,401 - app.integrations.defender.repository - INFO - Inserted batch 34 (2000 records)
+2025-12-02 14:55:39,626 - app.integrations.defender.repository - INFO - Inserted batch 35 (2000 records)
+2025-12-02 14:55:39,971 - app.integrations.defender.repository - INFO - Inserted batch 36 (2000 records)
+2025-12-02 14:55:40,199 - app.integrations.defender.repository - INFO - Inserted batch 37 (2000 records)
+2025-12-02 14:55:40,434 - app.integrations.defender.repository - INFO - Inserted batch 38 (2000 records)
+2025-12-02 14:55:40,789 - app.integrations.defender.repository - INFO - Inserted batch 39 (2000 records)
+2025-12-02 14:55:41,013 - app.integrations.defender.repository - INFO - Inserted batch 40 (2000 records)
+2025-12-02 14:55:41,229 - app.integrations.defender.repository - INFO - Inserted batch 41 (2000 records)
+2025-12-02 14:55:41,454 - app.integrations.defender.repository - INFO - Inserted batch 42 (2000 records)
+2025-12-02 14:55:41,681 - app.integrations.defender.repository - INFO - Inserted batch 43 (2000 records)
+2025-12-02 14:55:42,016 - app.integrations.defender.repository - INFO - Inserted batch 44 (2000 records)
+2025-12-02 14:55:42,232 - app.integrations.defender.repository - INFO - Inserted batch 45 (2000 records)
+2025-12-02 14:55:42,460 - app.integrations.defender.repository - INFO - Inserted batch 46 (2000 records)
+2025-12-02 14:55:42,808 - app.integrations.defender.repository - INFO - Inserted batch 47 (2000 records)
+2025-12-02 14:55:43,030 - app.integrations.defender.repository - INFO - Inserted batch 48 (2000 records)
+2025-12-02 14:55:43,266 - app.integrations.defender.repository - INFO - Inserted batch 49 (2000 records)
+2025-12-02 14:55:43,550 - app.integrations.defender.repository - INFO - Inserted batch 50 (2000 records)
+2025-12-02 14:55:43,915 - app.integrations.defender.repository - INFO - Inserted batch 51 (2000 records)
+2025-12-02 14:55:44,142 - app.integrations.defender.repository - INFO - Inserted batch 52 (2000 records)
+2025-12-02 14:55:44,373 - app.integrations.defender.repository - INFO - Inserted batch 53 (2000 records)
+2025-12-02 14:55:44,605 - app.integrations.defender.repository - INFO - Inserted batch 54 (2000 records)
+2025-12-02 14:55:44,902 - app.integrations.defender.repository - INFO - Inserted batch 55 (2000 records)
+2025-12-02 14:55:45,120 - app.integrations.defender.repository - INFO - Inserted batch 56 (2000 records)
+2025-12-02 14:55:45,351 - app.integrations.defender.repository - INFO - Inserted batch 57 (2000 records)
+2025-12-02 14:55:45,577 - app.integrations.defender.repository - INFO - Inserted batch 58 (2000 records)
+2025-12-02 14:55:45,890 - app.integrations.defender.repository - INFO - Inserted batch 59 (2000 records)
+2025-12-02 14:55:46,124 - app.integrations.defender.repository - INFO - Inserted batch 60 (2000 records)
+2025-12-02 14:55:46,363 - app.integrations.defender.repository - INFO - Inserted batch 61 (2000 records)
+2025-12-02 14:55:46,696 - app.integrations.defender.repository - INFO - Inserted batch 62 (2000 records)
+2025-12-02 14:55:46,987 - app.integrations.defender.repository - INFO - Inserted batch 63 (2000 records)
+2025-12-02 14:55:47,211 - app.integrations.defender.repository - INFO - Inserted batch 64 (2000 records)
+2025-12-02 14:55:47,444 - app.integrations.defender.repository - INFO - Inserted batch 65 (2000 records)
+2025-12-02 14:55:47,714 - app.integrations.defender.repository - INFO - Inserted batch 66 (2000 records)
+2025-12-02 14:55:47,958 - app.integrations.defender.repository - INFO - Inserted batch 67 (2000 records)
+2025-12-02 14:55:48,199 - app.integrations.defender.repository - INFO - Inserted batch 68 (2000 records)
+2025-12-02 14:55:48,434 - app.integrations.defender.repository - INFO - Inserted batch 69 (2000 records)
+2025-12-02 14:55:48,796 - app.integrations.defender.repository - INFO - Inserted batch 70 (2000 records)
+2025-12-02 14:55:49,067 - app.integrations.defender.repository - INFO - Inserted batch 71 (2000 records)
+2025-12-02 14:55:49,320 - app.integrations.defender.repository - INFO - Inserted batch 72 (2000 records)
+2025-12-02 14:55:49,688 - app.integrations.defender.repository - INFO - Inserted batch 73 (2000 records)
+2025-12-02 14:55:50,120 - app.integrations.defender.repository - INFO - Inserted batch 74 (2000 records)
+2025-12-02 14:55:50,450 - app.integrations.defender.repository - INFO - Inserted batch 75 (2000 records)
+2025-12-02 14:55:50,807 - app.integrations.defender.repository - INFO - Inserted batch 76 (2000 records)
+2025-12-02 14:55:51,054 - app.integrations.defender.repository - INFO - Inserted batch 77 (2000 records)
+2025-12-02 14:55:51,746 - app.integrations.defender.repository - INFO - Inserted batch 78 (2000 records)
+2025-12-02 14:55:52,018 - app.integrations.defender.repository - INFO - Inserted batch 79 (2000 records)
+2025-12-02 14:55:52,291 - app.integrations.defender.repository - INFO - Inserted batch 80 (2000 records)
+2025-12-02 14:55:52,536 - app.integrations.defender.repository - INFO - Inserted batch 81 (2000 records)
+2025-12-02 14:55:52,809 - app.integrations.defender.repository - INFO - Inserted batch 82 (2000 records)
+2025-12-02 14:55:53,066 - app.integrations.defender.repository - INFO - Inserted batch 83 (2000 records)
+2025-12-02 14:55:53,302 - app.integrations.defender.repository - INFO - Inserted batch 84 (2000 records)
+2025-12-02 14:55:53,585 - app.integrations.defender.repository - INFO - Inserted batch 85 (2000 records)
+2025-12-02 14:55:53,835 - app.integrations.defender.repository - INFO - Inserted batch 86 (2000 records)
+2025-12-02 14:55:54,104 - app.integrations.defender.repository - INFO - Inserted batch 87 (2000 records)
+2025-12-02 14:55:54,398 - app.integrations.defender.repository - INFO - Inserted batch 88 (2000 records)
+2025-12-02 14:55:54,478 - app.integrations.defender.repository - INFO - Inserted batch 89 (640 records)
+2025-12-02 14:55:54,698 - app.integrations.defender.repository - INFO - Successfully inserted 176640 records into temporary table
+2025-12-02 14:55:54,698 - app.integrations.defender.repository - INFO - Switching tables atomically...
+2025-12-02 14:55:54,798 - app.integrations.defender.repository - INFO - Renamed vulnerabilities to vulnerabilities_old
+2025-12-02 14:55:54,943 - app.integrations.defender.repository - INFO - Renamed vulnerabilities_temp to vulnerabilities
+2025-12-02 14:55:54,973 - app.integrations.defender.repository - INFO - Dropped old table vulnerabilities_old
+2025-12-02 14:55:54,973 - app.integrations.defender.repository - INFO - Verifying data was saved correctly...
+2025-12-02 14:55:55,046 - app.integrations.defender.repository - INFO - Verification: 176640 records found in vulnerabilities table
+2025-12-02 14:55:55,046 - app.integrations.defender.repository - INFO - Data verification successful: 176640 records match expected count
+2025-12-02 14:55:55,046 - app.integrations.defender.repository - INFO - Successfully saved 176640 vulnerability records using table switching method
+2025-12-02 14:55:55,197 - app.integrations.defender.sync - INFO - Database verification: 176640 records in database after save
+2025-12-02 14:55:55,197 - app.integrations.defender.sync - INFO - Device vulnerability details full sync completed, fetched 176640 records, saved 176640 records
+2025-12-02 14:55:55,207 - app.integrations.defender.repository - INFO - Sync time updated successfully: 2025-12-02 14:55:55.197595, type: full, records: 176640
+2025-12-02 14:55:55,207 - app.integrations.defender.sync - INFO - Sync time recorded: 2025-12-02 14:55:55.197595, records: 176640
+2025-12-02 14:55:55,310 - app.integrations.defender.sync - INFO - Starting vulnerability catalog sync...
+2025-12-02 14:55:55,310 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=0&$count=true
+2025-12-02 14:56:03,860 - app.integrations.defender.api_client - INFO - Catalog total count reported: 8000
+2025-12-02 14:56:03,861 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=0)
+2025-12-02 14:56:03,861 - app.integrations.defender.api_client - INFO - Reached reported catalog total count (8000), stopping
+2025-12-02 14:56:03,861 - app.integrations.defender.api_client - INFO - Total fetched 8000 vulnerability catalog records
+2025-12-02 14:56:03,862 - app.integrations.defender.service - INFO - Successfully fetched 8000 catalog records
+2025-12-02 14:56:03,862 - app.integrations.defender.sync - INFO - Catalog API returned 8000 records
+2025-12-02 14:56:04,631 - app.integrations.defender.repository - INFO - Saved/updated 8000 catalog records
+2025-12-02 14:56:04,637 - app.integrations.defender.sync - INFO - Catalog sync completed, 8000 records saved
+2025-12-02 14:56:04,639 - app.integrations.defender.sync - INFO - Creating snapshot after sync...
+2025-12-02 14:56:06,388 - app.integrations.defender.repository - INFO - Recording CVE-Device combinations for snapshot (deduplicating by CVE-Device)...
+2025-12-02 14:56:08,921 - app.integrations.defender.repository - INFO - Found 154301 unique CVE-Device combinations after deduplication
+2025-12-02 14:56:09,083 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 1 (2000 records)
+2025-12-02 14:56:09,181 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 2 (2000 records)
+2025-12-02 14:56:09,258 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 3 (2000 records)
+2025-12-02 14:56:09,335 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 4 (2000 records)
+2025-12-02 14:56:09,414 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 5 (2000 records)
+2025-12-02 14:56:09,503 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 6 (2000 records)
+2025-12-02 14:56:09,590 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 7 (2000 records)
+2025-12-02 14:56:09,750 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 8 (2000 records)
+2025-12-02 14:56:09,841 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 9 (2000 records)
+2025-12-02 14:56:09,957 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 10 (2000 records)
+2025-12-02 14:56:10,041 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 11 (2000 records)
+2025-12-02 14:56:10,129 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 12 (2000 records)
+2025-12-02 14:56:10,266 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 13 (2000 records)
+2025-12-02 14:56:10,350 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 14 (2000 records)
+2025-12-02 14:56:10,431 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 15 (2000 records)
+2025-12-02 14:56:10,511 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 16 (2000 records)
+2025-12-02 14:56:10,585 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 17 (2000 records)
+2025-12-02 14:56:10,741 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 18 (2000 records)
+2025-12-02 14:56:10,843 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 19 (2000 records)
+2025-12-02 14:56:10,920 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 20 (2000 records)
+2025-12-02 14:56:10,996 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 21 (2000 records)
+2025-12-02 14:56:11,072 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 22 (2000 records)
+2025-12-02 14:56:11,151 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 23 (2000 records)
+2025-12-02 14:56:11,227 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 24 (2000 records)
+2025-12-02 14:56:11,300 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 25 (2000 records)
+2025-12-02 14:56:11,368 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 26 (2000 records)
+2025-12-02 14:56:11,442 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 27 (2000 records)
+2025-12-02 14:56:11,516 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 28 (2000 records)
+2025-12-02 14:56:11,588 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 29 (2000 records)
+2025-12-02 14:56:11,789 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 30 (2000 records)
+2025-12-02 14:56:11,890 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 31 (2000 records)
+2025-12-02 14:56:11,964 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 32 (2000 records)
+2025-12-02 14:56:12,050 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 33 (2000 records)
+2025-12-02 14:56:12,123 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 34 (2000 records)
+2025-12-02 14:56:12,194 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 35 (2000 records)
+2025-12-02 14:56:12,266 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 36 (2000 records)
+2025-12-02 14:56:12,343 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 37 (2000 records)
+2025-12-02 14:56:12,420 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 38 (2000 records)
+2025-12-02 14:56:12,493 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 39 (2000 records)
+2025-12-02 14:56:12,568 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 40 (2000 records)
+2025-12-02 14:56:12,740 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 41 (2000 records)
+2025-12-02 14:56:12,822 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 42 (2000 records)
+2025-12-02 14:56:12,905 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 43 (2000 records)
+2025-12-02 14:56:12,980 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 44 (2000 records)
+2025-12-02 14:56:13,053 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 45 (2000 records)
+2025-12-02 14:56:13,143 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 46 (2000 records)
+2025-12-02 14:56:13,221 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 47 (2000 records)
+2025-12-02 14:56:13,294 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 48 (2000 records)
+2025-12-02 14:56:13,364 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 49 (2000 records)
+2025-12-02 14:56:13,438 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 50 (2000 records)
+2025-12-02 14:56:13,509 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 51 (2000 records)
+2025-12-02 14:56:13,581 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 52 (2000 records)
+2025-12-02 14:56:13,787 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 53 (2000 records)
+2025-12-02 14:56:13,865 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 54 (2000 records)
+2025-12-02 14:56:13,938 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 55 (2000 records)
+2025-12-02 14:56:14,010 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 56 (2000 records)
+2025-12-02 14:56:14,081 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 57 (2000 records)
+2025-12-02 14:56:14,152 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 58 (2000 records)
+2025-12-02 14:56:14,224 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 59 (2000 records)
+2025-12-02 14:56:14,301 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 60 (2000 records)
+2025-12-02 14:56:14,372 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 61 (2000 records)
+2025-12-02 14:56:14,443 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 62 (2000 records)
+2025-12-02 14:56:14,515 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 63 (2000 records)
+2025-12-02 14:56:14,601 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 64 (2000 records)
+2025-12-02 14:56:14,751 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 65 (2000 records)
+2025-12-02 14:56:14,827 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 66 (2000 records)
+2025-12-02 14:56:14,899 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 67 (2000 records)
+2025-12-02 14:56:14,982 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 68 (2000 records)
+2025-12-02 14:56:15,059 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 69 (2000 records)
+2025-12-02 14:56:15,129 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 70 (2000 records)
+2025-12-02 14:56:15,199 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 71 (2000 records)
+2025-12-02 14:56:15,271 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 72 (2000 records)
+2025-12-02 14:56:15,342 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 73 (2000 records)
+2025-12-02 14:56:15,414 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 74 (2000 records)
+2025-12-02 14:56:15,493 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 75 (2000 records)
+2025-12-02 14:56:15,568 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 76 (2000 records)
+2025-12-02 14:56:15,672 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 77 (2000 records)
+2025-12-02 14:56:15,713 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 78 (301 records)
+2025-12-02 14:56:15,775 - app.integrations.defender.repository - INFO - Snapshot recorded successfully, snapshot ID: 12, CVE-Device records: 154301
+2025-12-02 14:56:15,797 - app.integrations.defender.sync - INFO - Snapshot created successfully with ID: 12
+2025-12-02 14:56:15,797 - app.integrations.defender.sync - INFO - Full sync completed successfully
+2025-12-02 14:56:15,797 - app.integrations.defender.sync - INFO - Full sync process completed successfully
+2025-12-02 14:56:15,798 - app.integrations.defender.sync - INFO - Database connection closed
+2025-12-02 14:56:15,798 - app.integrations.defender.sync - INFO - Vulnerability data sync completed successfully
+2025-12-02 15:58:25,912 - app.integrations.defender.sync - INFO - Starting Defender vulnerability data sync...
+2025-12-02 15:58:25,947 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-12-02 15:58:25,948 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-12-02 15:58:25,948 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-02 15:58:25,954 - app.integrations.defender.database - INFO - Successfully connected to MySQL database
+2025-12-02 15:58:25,955 - app.integrations.defender.sync - INFO - Initializing database...
+2025-12-02 15:58:26,033 - app.integrations.defender.database - INFO - sync_state table exists, checking structure...
+2025-12-02 15:58:26,033 - app.integrations.defender.database - INFO - Adding records_count column to sync_state table...
+2025-12-02 15:58:26,033 - app.integrations.defender.database - WARNING - Error adding records_count column: Unread result found
+2025-12-02 15:58:26,068 - app.integrations.defender.database - INFO - data_source column doesn't exist, no need to remove
+2025-12-02 15:58:26,071 - app.integrations.defender.database - INFO - vulnerabilities table exists, checking for autopatch_covered column...
+2025-12-02 15:58:26,072 - app.integrations.defender.database - INFO - vulnerabilities table already has autopatch_covered column
+2025-12-02 15:58:26,074 - app.integrations.defender.database - INFO - vulnerabilities already has metasploit_detected column
+2025-12-02 15:58:26,076 - app.integrations.defender.database - INFO - vulnerabilities already has nuclei_detected column
+2025-12-02 15:58:26,077 - app.integrations.defender.database - INFO - vulnerabilities already has recordfuture_detected column
+2025-12-02 15:58:26,150 - app.integrations.defender.database - INFO - Database table structure initialized successfully
+2025-12-02 15:58:26,151 - app.integrations.defender.sync - INFO - Database initialization completed
+2025-12-02 15:58:26,151 - app.integrations.defender.sync - INFO - Starting full sync process...
+2025-12-02 15:58:26,151 - app.integrations.defender.sync - INFO - Starting full sync...
+2025-12-02 15:58:26,151 - app.integrations.defender.sync - INFO - Starting device vulnerability details full sync...
+2025-12-02 15:58:26,151 - app.integrations.defender.sync - INFO - Fetching vulnerabilities from Microsoft Defender API...
+2025-12-02 15:58:26,710 - app.integrations.defender.auth - INFO - Successfully obtained access token
+2025-12-02 15:58:26,711 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pageSize=50000
+2025-12-02 15:58:32,532 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 15:58:32,532 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjMsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjoxMDkyOX0=
+2025-12-02 15:58:38,310 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 15:58:38,311 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjozOTUyNH0=
+2025-12-02 15:58:44,524 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-02 15:58:44,525 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMi8wNTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0Ijo4OTUyNH0=
+2025-12-02 15:58:48,483 - app.integrations.defender.api_client - INFO - Fetched 26640 records
+2025-12-02 15:58:48,484 - app.integrations.defender.api_client - INFO - Total fetched 176640 records
+2025-12-02 15:58:48,485 - app.integrations.defender.service - INFO - Successfully fetched 176640 vulnerability records
+2025-12-02 15:58:48,486 - app.integrations.defender.sync - INFO - API returned 176640 vulnerability records
+2025-12-02 15:58:48,486 - app.integrations.defender.sync - INFO - Saving 176640 vulnerability records to database...
+2025-12-02 15:58:48,486 - app.integrations.defender.repository - INFO - Starting to save 176640 vulnerability records...
+2025-12-02 15:58:48,489 - app.integrations.defender.repository - INFO - Checking if vulnerabilities table exists...
+2025-12-02 15:58:48,499 - app.integrations.defender.repository - INFO - vulnerabilities table exists
+2025-12-02 15:58:48,502 - app.integrations.defender.repository - INFO - Creating temporary table for data insertion...
+2025-12-02 15:58:48,815 - app.integrations.defender.repository - INFO - Temporary table vulnerabilities_temp created successfully
+2025-12-02 15:58:48,815 - app.integrations.defender.repository - INFO - Validating and preparing 176640 records for batch insert...
+2025-12-02 15:58:49,015 - app.integrations.defender.repository - INFO - Validated 176640 out of 176640 records
+2025-12-02 15:58:52,615 - app.integrations.defender.repository - INFO - Inserting 176640 records in batches of 2000...
+2025-12-02 15:58:53,075 - app.integrations.defender.repository - INFO - Inserted batch 1 (2000 records)
+2025-12-02 15:58:53,410 - app.integrations.defender.repository - INFO - Inserted batch 2 (2000 records)
+2025-12-02 15:58:53,759 - app.integrations.defender.repository - INFO - Inserted batch 3 (2000 records)
+2025-12-02 15:58:54,140 - app.integrations.defender.repository - INFO - Inserted batch 4 (2000 records)
+2025-12-02 15:58:54,464 - app.integrations.defender.repository - INFO - Inserted batch 5 (2000 records)
+2025-12-02 15:58:54,750 - app.integrations.defender.repository - INFO - Inserted batch 6 (2000 records)
+2025-12-02 15:58:55,233 - app.integrations.defender.repository - INFO - Inserted batch 7 (2000 records)
+2025-12-02 15:58:55,491 - app.integrations.defender.repository - INFO - Inserted batch 8 (2000 records)
+2025-12-02 15:58:55,765 - app.integrations.defender.repository - INFO - Inserted batch 9 (2000 records)
+2025-12-02 15:58:56,112 - app.integrations.defender.repository - INFO - Inserted batch 10 (2000 records)
+2025-12-02 15:58:56,379 - app.integrations.defender.repository - INFO - Inserted batch 11 (2000 records)
+2025-12-02 15:58:56,640 - app.integrations.defender.repository - INFO - Inserted batch 12 (2000 records)
+2025-12-02 15:58:56,893 - app.integrations.defender.repository - INFO - Inserted batch 13 (2000 records)
+2025-12-02 15:58:57,155 - app.integrations.defender.repository - INFO - Inserted batch 14 (2000 records)
+2025-12-02 15:58:57,390 - app.integrations.defender.repository - INFO - Inserted batch 15 (2000 records)
+2025-12-02 15:58:57,642 - app.integrations.defender.repository - INFO - Inserted batch 16 (2000 records)
+2025-12-02 15:58:57,882 - app.integrations.defender.repository - INFO - Inserted batch 17 (2000 records)
+2025-12-02 15:58:58,287 - app.integrations.defender.repository - INFO - Inserted batch 18 (2000 records)
+2025-12-02 15:58:58,498 - app.integrations.defender.repository - INFO - Inserted batch 19 (2000 records)
+2025-12-02 15:58:58,740 - app.integrations.defender.repository - INFO - Inserted batch 20 (2000 records)
+2025-12-02 15:58:59,027 - app.integrations.defender.repository - INFO - Inserted batch 21 (2000 records)
+2025-12-02 15:58:59,294 - app.integrations.defender.repository - INFO - Inserted batch 22 (2000 records)
+2025-12-02 15:58:59,525 - app.integrations.defender.repository - INFO - Inserted batch 23 (2000 records)
+2025-12-02 15:58:59,761 - app.integrations.defender.repository - INFO - Inserted batch 24 (2000 records)
+2025-12-02 15:59:00,189 - app.integrations.defender.repository - INFO - Inserted batch 25 (2000 records)
+2025-12-02 15:59:00,525 - app.integrations.defender.repository - INFO - Inserted batch 26 (2000 records)
+2025-12-02 15:59:00,782 - app.integrations.defender.repository - INFO - Inserted batch 27 (2000 records)
+2025-12-02 15:59:01,222 - app.integrations.defender.repository - INFO - Inserted batch 28 (2000 records)
+2025-12-02 15:59:01,483 - app.integrations.defender.repository - INFO - Inserted batch 29 (2000 records)
+2025-12-02 15:59:01,732 - app.integrations.defender.repository - INFO - Inserted batch 30 (2000 records)
+2025-12-02 15:59:01,985 - app.integrations.defender.repository - INFO - Inserted batch 31 (2000 records)
+2025-12-02 15:59:02,335 - app.integrations.defender.repository - INFO - Inserted batch 32 (2000 records)
+2025-12-02 15:59:02,610 - app.integrations.defender.repository - INFO - Inserted batch 33 (2000 records)
+2025-12-02 15:59:02,852 - app.integrations.defender.repository - INFO - Inserted batch 34 (2000 records)
+2025-12-02 15:59:03,114 - app.integrations.defender.repository - INFO - Inserted batch 35 (2000 records)
+2025-12-02 15:59:03,370 - app.integrations.defender.repository - INFO - Inserted batch 36 (2000 records)
+2025-12-02 15:59:03,603 - app.integrations.defender.repository - INFO - Inserted batch 37 (2000 records)
+2025-12-02 15:59:03,858 - app.integrations.defender.repository - INFO - Inserted batch 38 (2000 records)
+2025-12-02 15:59:04,291 - app.integrations.defender.repository - INFO - Inserted batch 39 (2000 records)
+2025-12-02 15:59:04,570 - app.integrations.defender.repository - INFO - Inserted batch 40 (2000 records)
+2025-12-02 15:59:04,792 - app.integrations.defender.repository - INFO - Inserted batch 41 (2000 records)
+2025-12-02 15:59:05,048 - app.integrations.defender.repository - INFO - Inserted batch 42 (2000 records)
+2025-12-02 15:59:05,373 - app.integrations.defender.repository - INFO - Inserted batch 43 (2000 records)
+2025-12-02 15:59:05,603 - app.integrations.defender.repository - INFO - Inserted batch 44 (2000 records)
+2025-12-02 15:59:05,842 - app.integrations.defender.repository - INFO - Inserted batch 45 (2000 records)
+2025-12-02 15:59:06,195 - app.integrations.defender.repository - INFO - Inserted batch 46 (2000 records)
+2025-12-02 15:59:06,433 - app.integrations.defender.repository - INFO - Inserted batch 47 (2000 records)
+2025-12-02 15:59:06,672 - app.integrations.defender.repository - INFO - Inserted batch 48 (2000 records)
+2025-12-02 15:59:06,920 - app.integrations.defender.repository - INFO - Inserted batch 49 (2000 records)
+2025-12-02 15:59:07,343 - app.integrations.defender.repository - INFO - Inserted batch 50 (2000 records)
+2025-12-02 15:59:07,578 - app.integrations.defender.repository - INFO - Inserted batch 51 (2000 records)
+2025-12-02 15:59:07,811 - app.integrations.defender.repository - INFO - Inserted batch 52 (2000 records)
+2025-12-02 15:59:08,218 - app.integrations.defender.repository - INFO - Inserted batch 53 (2000 records)
+2025-12-02 15:59:08,466 - app.integrations.defender.repository - INFO - Inserted batch 54 (2000 records)
+2025-12-02 15:59:08,735 - app.integrations.defender.repository - INFO - Inserted batch 55 (2000 records)
+2025-12-02 15:59:09,112 - app.integrations.defender.repository - INFO - Inserted batch 56 (2000 records)
+2025-12-02 15:59:09,347 - app.integrations.defender.repository - INFO - Inserted batch 57 (2000 records)
+2025-12-02 15:59:09,575 - app.integrations.defender.repository - INFO - Inserted batch 58 (2000 records)
+2025-12-02 15:59:09,826 - app.integrations.defender.repository - INFO - Inserted batch 59 (2000 records)
+2025-12-02 15:59:10,152 - app.integrations.defender.repository - INFO - Inserted batch 60 (2000 records)
+2025-12-02 15:59:10,557 - app.integrations.defender.repository - INFO - Inserted batch 61 (2000 records)
+2025-12-02 15:59:10,820 - app.integrations.defender.repository - INFO - Inserted batch 62 (2000 records)
+2025-12-02 15:59:11,194 - app.integrations.defender.repository - INFO - Inserted batch 63 (2000 records)
+2025-12-02 15:59:11,765 - app.integrations.defender.repository - INFO - Inserted batch 64 (2000 records)
+2025-12-02 15:59:12,464 - app.integrations.defender.repository - INFO - Inserted batch 65 (2000 records)
+2025-12-02 15:59:13,388 - app.integrations.defender.repository - INFO - Inserted batch 66 (2000 records)
+2025-12-02 15:59:14,199 - app.integrations.defender.repository - INFO - Inserted batch 67 (2000 records)
+2025-12-02 15:59:14,777 - app.integrations.defender.repository - INFO - Inserted batch 68 (2000 records)
+2025-12-02 15:59:15,894 - app.integrations.defender.repository - INFO - Inserted batch 69 (2000 records)
+2025-12-02 15:59:16,483 - app.integrations.defender.repository - INFO - Inserted batch 70 (2000 records)
+2025-12-02 15:59:16,801 - app.integrations.defender.repository - INFO - Inserted batch 71 (2000 records)
+2025-12-02 15:59:17,216 - app.integrations.defender.repository - INFO - Inserted batch 72 (2000 records)
+2025-12-02 15:59:17,598 - app.integrations.defender.repository - INFO - Inserted batch 73 (2000 records)
+2025-12-02 15:59:17,951 - app.integrations.defender.repository - INFO - Inserted batch 74 (2000 records)
+2025-12-02 15:59:18,308 - app.integrations.defender.repository - INFO - Inserted batch 75 (2000 records)
+2025-12-02 15:59:18,611 - app.integrations.defender.repository - INFO - Inserted batch 76 (2000 records)
+2025-12-02 15:59:18,913 - app.integrations.defender.repository - INFO - Inserted batch 77 (2000 records)
+2025-12-02 15:59:19,232 - app.integrations.defender.repository - INFO - Inserted batch 78 (2000 records)
+2025-12-02 15:59:19,841 - app.integrations.defender.repository - INFO - Inserted batch 79 (2000 records)
+2025-12-02 15:59:20,331 - app.integrations.defender.repository - INFO - Inserted batch 80 (2000 records)
+2025-12-02 15:59:20,604 - app.integrations.defender.repository - INFO - Inserted batch 81 (2000 records)
+2025-12-02 15:59:20,875 - app.integrations.defender.repository - INFO - Inserted batch 82 (2000 records)
+2025-12-02 15:59:21,385 - app.integrations.defender.repository - INFO - Inserted batch 83 (2000 records)
+2025-12-02 15:59:21,631 - app.integrations.defender.repository - INFO - Inserted batch 84 (2000 records)
+2025-12-02 15:59:21,893 - app.integrations.defender.repository - INFO - Inserted batch 85 (2000 records)
+2025-12-02 15:59:22,271 - app.integrations.defender.repository - INFO - Inserted batch 86 (2000 records)
+2025-12-02 15:59:22,734 - app.integrations.defender.repository - INFO - Inserted batch 87 (2000 records)
+2025-12-02 15:59:23,145 - app.integrations.defender.repository - INFO - Inserted batch 88 (2000 records)
+2025-12-02 15:59:23,373 - app.integrations.defender.repository - INFO - Inserted batch 89 (640 records)
+2025-12-02 15:59:23,730 - app.integrations.defender.repository - INFO - Successfully inserted 176640 records into temporary table
+2025-12-02 15:59:23,730 - app.integrations.defender.repository - INFO - Switching tables atomically...
+2025-12-02 15:59:23,796 - app.integrations.defender.repository - INFO - Renamed vulnerabilities to vulnerabilities_old
+2025-12-02 15:59:23,829 - app.integrations.defender.repository - INFO - Renamed vulnerabilities_temp to vulnerabilities
+2025-12-02 15:59:23,869 - app.integrations.defender.repository - INFO - Dropped old table vulnerabilities_old
+2025-12-02 15:59:23,869 - app.integrations.defender.repository - INFO - Verifying data was saved correctly...
+2025-12-02 15:59:24,029 - app.integrations.defender.repository - INFO - Verification: 176640 records found in vulnerabilities table
+2025-12-02 15:59:24,029 - app.integrations.defender.repository - INFO - Data verification successful: 176640 records match expected count
+2025-12-02 15:59:24,029 - app.integrations.defender.repository - INFO - Successfully saved 176640 vulnerability records using table switching method
+2025-12-02 15:59:24,268 - app.integrations.defender.sync - INFO - Database verification: 176640 records in database after save
+2025-12-02 15:59:24,268 - app.integrations.defender.sync - INFO - Device vulnerability details full sync completed, fetched 176640 records, saved 176640 records
+2025-12-02 15:59:24,277 - app.integrations.defender.repository - INFO - Sync time updated successfully: 2025-12-02 15:59:24.268552, type: full, records: 176640
+2025-12-02 15:59:24,277 - app.integrations.defender.sync - INFO - Sync time recorded: 2025-12-02 15:59:24.268552, records: 176640
+2025-12-02 15:59:24,426 - app.integrations.defender.sync - INFO - Starting vulnerability catalog sync...
+2025-12-02 15:59:24,426 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=0
+2025-12-02 15:59:31,461 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=0)
+2025-12-02 15:59:31,461 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=8000
+2025-12-02 15:59:39,111 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=8000)
+2025-12-02 15:59:39,113 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=16000
+2025-12-02 15:59:46,672 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=16000)
+2025-12-02 15:59:46,672 - app.integrations.defender.api_client - INFO - Total fetched 24000 vulnerability catalog records
+2025-12-02 15:59:46,674 - app.integrations.defender.service - INFO - Successfully fetched 24000 catalog records
+2025-12-02 15:59:46,674 - app.integrations.defender.sync - INFO - Catalog API returned 24000 records
+2025-12-02 15:59:48,539 - app.integrations.defender.repository - INFO - Saved/updated 24000 catalog records
+2025-12-02 15:59:48,544 - app.integrations.defender.sync - INFO - Catalog sync completed, 24000 records saved
+2025-12-02 15:59:48,552 - app.integrations.defender.sync - INFO - Creating snapshot after sync...
+2025-12-02 15:59:51,272 - app.integrations.defender.repository - INFO - Recording CVE-Device combinations for snapshot (deduplicating by CVE-Device)...
+2025-12-02 15:59:54,043 - app.integrations.defender.repository - INFO - Found 154301 unique CVE-Device combinations after deduplication
+2025-12-02 15:59:54,210 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 1 (2000 records)
+2025-12-02 15:59:54,361 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 2 (2000 records)
+2025-12-02 15:59:54,482 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 3 (2000 records)
+2025-12-02 15:59:54,569 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 4 (2000 records)
+2025-12-02 15:59:54,681 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 5 (2000 records)
+2025-12-02 15:59:54,769 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 6 (2000 records)
+2025-12-02 15:59:54,965 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 7 (2000 records)
+2025-12-02 15:59:55,099 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 8 (2000 records)
+2025-12-02 15:59:55,476 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 9 (2000 records)
+2025-12-02 15:59:55,671 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 10 (2000 records)
+2025-12-02 15:59:55,776 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 11 (2000 records)
+2025-12-02 15:59:55,874 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 12 (2000 records)
+2025-12-02 15:59:56,191 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 13 (2000 records)
+2025-12-02 15:59:56,281 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 14 (2000 records)
+2025-12-02 15:59:56,366 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 15 (2000 records)
+2025-12-02 15:59:56,448 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 16 (2000 records)
+2025-12-02 15:59:56,522 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 17 (2000 records)
+2025-12-02 15:59:56,608 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 18 (2000 records)
+2025-12-02 15:59:56,686 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 19 (2000 records)
+2025-12-02 15:59:56,764 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 20 (2000 records)
+2025-12-02 15:59:56,841 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 21 (2000 records)
+2025-12-02 15:59:56,930 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 22 (2000 records)
+2025-12-02 15:59:57,007 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 23 (2000 records)
+2025-12-02 15:59:57,101 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 24 (2000 records)
+2025-12-02 15:59:57,208 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 25 (2000 records)
+2025-12-02 15:59:57,346 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 26 (2000 records)
+2025-12-02 15:59:57,423 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 27 (2000 records)
+2025-12-02 15:59:57,505 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 28 (2000 records)
+2025-12-02 15:59:57,588 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 29 (2000 records)
+2025-12-02 15:59:57,669 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 30 (2000 records)
+2025-12-02 15:59:57,744 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 31 (2000 records)
+2025-12-02 15:59:57,827 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 32 (2000 records)
+2025-12-02 15:59:57,904 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 33 (2000 records)
+2025-12-02 15:59:57,982 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 34 (2000 records)
+2025-12-02 15:59:58,089 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 35 (2000 records)
+2025-12-02 15:59:58,264 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 36 (2000 records)
+2025-12-02 15:59:58,342 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 37 (2000 records)
+2025-12-02 15:59:58,421 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 38 (2000 records)
+2025-12-02 15:59:58,503 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 39 (2000 records)
+2025-12-02 15:59:58,585 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 40 (2000 records)
+2025-12-02 15:59:58,661 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 41 (2000 records)
+2025-12-02 15:59:58,737 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 42 (2000 records)
+2025-12-02 15:59:58,816 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 43 (2000 records)
+2025-12-02 15:59:58,893 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 44 (2000 records)
+2025-12-02 15:59:58,968 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 45 (2000 records)
+2025-12-02 15:59:59,058 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 46 (2000 records)
+2025-12-02 15:59:59,244 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 47 (2000 records)
+2025-12-02 15:59:59,319 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 48 (2000 records)
+2025-12-02 15:59:59,394 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 49 (2000 records)
+2025-12-02 15:59:59,470 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 50 (2000 records)
+2025-12-02 15:59:59,543 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 51 (2000 records)
+2025-12-02 15:59:59,619 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 52 (2000 records)
+2025-12-02 15:59:59,695 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 53 (2000 records)
+2025-12-02 15:59:59,770 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 54 (2000 records)
+2025-12-02 15:59:59,847 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 55 (2000 records)
+2025-12-02 15:59:59,923 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 56 (2000 records)
+2025-12-02 16:00:00,004 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 57 (2000 records)
+2025-12-02 16:00:00,202 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 58 (2000 records)
+2025-12-02 16:00:00,332 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 59 (2000 records)
+2025-12-02 16:00:00,407 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 60 (2000 records)
+2025-12-02 16:00:00,483 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 61 (2000 records)
+2025-12-02 16:00:00,555 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 62 (2000 records)
+2025-12-02 16:00:00,630 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 63 (2000 records)
+2025-12-02 16:00:00,708 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 64 (2000 records)
+2025-12-02 16:00:00,783 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 65 (2000 records)
+2025-12-02 16:00:00,864 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 66 (2000 records)
+2025-12-02 16:00:00,941 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 67 (2000 records)
+2025-12-02 16:00:01,025 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 68 (2000 records)
+2025-12-02 16:00:01,367 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 69 (2000 records)
+2025-12-02 16:00:01,453 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 70 (2000 records)
+2025-12-02 16:00:01,526 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 71 (2000 records)
+2025-12-02 16:00:01,601 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 72 (2000 records)
+2025-12-02 16:00:01,674 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 73 (2000 records)
+2025-12-02 16:00:01,761 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 74 (2000 records)
+2025-12-02 16:00:01,839 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 75 (2000 records)
+2025-12-02 16:00:01,925 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 76 (2000 records)
+2025-12-02 16:00:01,997 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 77 (2000 records)
+2025-12-02 16:00:02,013 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 78 (301 records)
+2025-12-02 16:00:02,119 - app.integrations.defender.repository - INFO - Snapshot recorded successfully, snapshot ID: 13, CVE-Device records: 154301
+2025-12-02 16:00:02,153 - app.integrations.defender.sync - INFO - Snapshot created successfully with ID: 13
+2025-12-02 16:00:02,154 - app.integrations.defender.sync - INFO - Full sync completed successfully
+2025-12-02 16:00:02,154 - app.integrations.defender.sync - INFO - Full sync process completed successfully
+2025-12-02 16:00:02,154 - app.integrations.defender.sync - INFO - Database connection closed
+2025-12-02 16:00:02,154 - app.integrations.defender.sync - INFO - Vulnerability data sync completed successfully
+2025-12-03 13:53:13,792 - app.integrations.defender.sync - INFO - Starting Defender vulnerability data sync...
+2025-12-03 13:53:13,811 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-12-03 13:53:13,812 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-12-03 13:53:13,812 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-03 13:53:13,813 - app.integrations.defender.database - INFO - Successfully connected to MySQL database
+2025-12-03 13:53:13,813 - app.integrations.defender.sync - INFO - Initializing database...
+2025-12-03 13:53:13,815 - app.integrations.defender.database - INFO - sync_state table exists, checking structure...
+2025-12-03 13:53:13,815 - app.integrations.defender.database - INFO - Adding records_count column to sync_state table...
+2025-12-03 13:53:13,815 - app.integrations.defender.database - WARNING - Error adding records_count column: Unread result found
+2025-12-03 13:53:13,816 - app.integrations.defender.database - INFO - data_source column doesn't exist, no need to remove
+2025-12-03 13:53:13,818 - app.integrations.defender.database - INFO - vulnerabilities table exists, checking for autopatch_covered column...
+2025-12-03 13:53:13,819 - app.integrations.defender.database - INFO - vulnerabilities table already has autopatch_covered column
+2025-12-03 13:53:13,819 - app.integrations.defender.database - INFO - vulnerabilities already has metasploit_detected column
+2025-12-03 13:53:13,819 - app.integrations.defender.database - INFO - vulnerabilities already has nuclei_detected column
+2025-12-03 13:53:13,819 - app.integrations.defender.database - INFO - vulnerabilities already has recordfuture_detected column
+2025-12-03 13:53:13,853 - app.integrations.defender.database - INFO - Database table structure initialized successfully
+2025-12-03 13:53:13,853 - app.integrations.defender.sync - INFO - Database initialization completed
+2025-12-03 13:53:13,853 - app.integrations.defender.sync - INFO - Starting full sync process...
+2025-12-03 13:53:13,853 - app.integrations.defender.sync - INFO - Starting full sync...
+2025-12-03 13:53:13,853 - app.integrations.defender.sync - INFO - Starting device vulnerability details full sync...
+2025-12-03 13:53:13,853 - app.integrations.defender.sync - INFO - Fetching vulnerabilities from Microsoft Defender API...
+2025-12-03 13:53:14,415 - app.integrations.defender.auth - INFO - Successfully obtained access token
+2025-12-03 13:53:14,415 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pageSize=50000
+2025-12-03 13:53:20,803 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-03 13:53:20,803 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMy8wMTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjMsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjoxMDE1M30=
+2025-12-03 13:53:26,547 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-03 13:53:26,547 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMy8wMTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0IjozODQzNn0=
+2025-12-03 13:53:32,644 - app.integrations.defender.api_client - INFO - Fetched 50000 records
+2025-12-03 13:53:32,645 - app.integrations.defender.api_client - INFO - Requesting: https://us.api.security.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?pagesize=50000&$skiptoken=eyJFeHBvcnREZWZpbml0aW9uIjp7IlRpbWVQYXRoIjoiMjAyNS0xMi0wMy8wMTQwLyJ9LCJFeHBvcnRGaWxlSW5kZXgiOjcsIkV4cG9ydEZpbGVOYW1lIjpudWxsLCJMaW5lU3RvcHBlZEF0Ijo4ODQzNn0=
+2025-12-03 13:53:37,129 - app.integrations.defender.api_client - INFO - Fetched 35267 records
+2025-12-03 13:53:37,129 - app.integrations.defender.api_client - INFO - Total fetched 185267 records
+2025-12-03 13:53:37,130 - app.integrations.defender.service - INFO - Successfully fetched 185267 vulnerability records
+2025-12-03 13:53:37,130 - app.integrations.defender.sync - INFO - API returned 185267 vulnerability records
+2025-12-03 13:53:37,130 - app.integrations.defender.sync - INFO - Saving 185267 vulnerability records to database...
+2025-12-03 13:53:37,130 - app.integrations.defender.repository - INFO - Starting to save 185267 vulnerability records...
+2025-12-03 13:53:37,133 - app.integrations.defender.repository - INFO - Checking if vulnerabilities table exists...
+2025-12-03 13:53:37,136 - app.integrations.defender.repository - INFO - vulnerabilities table exists
+2025-12-03 13:53:37,136 - app.integrations.defender.repository - INFO - Creating temporary table for data insertion...
+2025-12-03 13:53:37,344 - app.integrations.defender.repository - INFO - Temporary table vulnerabilities_temp created successfully
+2025-12-03 13:53:37,345 - app.integrations.defender.repository - INFO - Validating and preparing 185267 records for batch insert...
+2025-12-03 13:53:37,409 - app.integrations.defender.repository - INFO - Validated 185267 out of 185267 records
+2025-12-03 13:53:39,956 - app.integrations.defender.repository - INFO - Inserting 185267 records in batches of 2000...
+2025-12-03 13:53:40,530 - app.integrations.defender.repository - INFO - Inserted batch 1 (2000 records)
+2025-12-03 13:53:40,824 - app.integrations.defender.repository - INFO - Inserted batch 2 (2000 records)
+2025-12-03 13:53:41,197 - app.integrations.defender.repository - INFO - Inserted batch 3 (2000 records)
+2025-12-03 13:53:41,611 - app.integrations.defender.repository - INFO - Inserted batch 4 (2000 records)
+2025-12-03 13:53:41,897 - app.integrations.defender.repository - INFO - Inserted batch 5 (2000 records)
+2025-12-03 13:53:42,174 - app.integrations.defender.repository - INFO - Inserted batch 6 (2000 records)
+2025-12-03 13:53:42,471 - app.integrations.defender.repository - INFO - Inserted batch 7 (2000 records)
+2025-12-03 13:53:42,915 - app.integrations.defender.repository - INFO - Inserted batch 8 (2000 records)
+2025-12-03 13:53:43,209 - app.integrations.defender.repository - INFO - Inserted batch 9 (2000 records)
+2025-12-03 13:53:43,512 - app.integrations.defender.repository - INFO - Inserted batch 10 (2000 records)
+2025-12-03 13:53:43,759 - app.integrations.defender.repository - INFO - Inserted batch 11 (2000 records)
+2025-12-03 13:53:44,015 - app.integrations.defender.repository - INFO - Inserted batch 12 (2000 records)
+2025-12-03 13:53:44,228 - app.integrations.defender.repository - INFO - Inserted batch 13 (2000 records)
+2025-12-03 13:53:44,446 - app.integrations.defender.repository - INFO - Inserted batch 14 (2000 records)
+2025-12-03 13:53:44,746 - app.integrations.defender.repository - INFO - Inserted batch 15 (2000 records)
+2025-12-03 13:53:44,969 - app.integrations.defender.repository - INFO - Inserted batch 16 (2000 records)
+2025-12-03 13:53:45,183 - app.integrations.defender.repository - INFO - Inserted batch 17 (2000 records)
+2025-12-03 13:53:45,438 - app.integrations.defender.repository - INFO - Inserted batch 18 (2000 records)
+2025-12-03 13:53:45,786 - app.integrations.defender.repository - INFO - Inserted batch 19 (2000 records)
+2025-12-03 13:53:46,030 - app.integrations.defender.repository - INFO - Inserted batch 20 (2000 records)
+2025-12-03 13:53:46,254 - app.integrations.defender.repository - INFO - Inserted batch 21 (2000 records)
+2025-12-03 13:53:46,475 - app.integrations.defender.repository - INFO - Inserted batch 22 (2000 records)
+2025-12-03 13:53:46,773 - app.integrations.defender.repository - INFO - Inserted batch 23 (2000 records)
+2025-12-03 13:53:47,015 - app.integrations.defender.repository - INFO - Inserted batch 24 (2000 records)
+2025-12-03 13:53:47,239 - app.integrations.defender.repository - INFO - Inserted batch 25 (2000 records)
+2025-12-03 13:53:47,476 - app.integrations.defender.repository - INFO - Inserted batch 26 (2000 records)
+2025-12-03 13:53:47,807 - app.integrations.defender.repository - INFO - Inserted batch 27 (2000 records)
+2025-12-03 13:53:48,011 - app.integrations.defender.repository - INFO - Inserted batch 28 (2000 records)
+2025-12-03 13:53:48,231 - app.integrations.defender.repository - INFO - Inserted batch 29 (2000 records)
+2025-12-03 13:53:48,465 - app.integrations.defender.repository - INFO - Inserted batch 30 (2000 records)
+2025-12-03 13:53:48,788 - app.integrations.defender.repository - INFO - Inserted batch 31 (2000 records)
+2025-12-03 13:53:49,015 - app.integrations.defender.repository - INFO - Inserted batch 32 (2000 records)
+2025-12-03 13:53:49,232 - app.integrations.defender.repository - INFO - Inserted batch 33 (2000 records)
+2025-12-03 13:53:49,450 - app.integrations.defender.repository - INFO - Inserted batch 34 (2000 records)
+2025-12-03 13:53:49,772 - app.integrations.defender.repository - INFO - Inserted batch 35 (2000 records)
+2025-12-03 13:53:50,005 - app.integrations.defender.repository - INFO - Inserted batch 36 (2000 records)
+2025-12-03 13:53:50,267 - app.integrations.defender.repository - INFO - Inserted batch 37 (2000 records)
+2025-12-03 13:53:50,530 - app.integrations.defender.repository - INFO - Inserted batch 38 (2000 records)
+2025-12-03 13:53:50,758 - app.integrations.defender.repository - INFO - Inserted batch 39 (2000 records)
+2025-12-03 13:53:50,971 - app.integrations.defender.repository - INFO - Inserted batch 40 (2000 records)
+2025-12-03 13:53:51,185 - app.integrations.defender.repository - INFO - Inserted batch 41 (2000 records)
+2025-12-03 13:53:51,423 - app.integrations.defender.repository - INFO - Inserted batch 42 (2000 records)
+2025-12-03 13:53:51,824 - app.integrations.defender.repository - INFO - Inserted batch 43 (2000 records)
+2025-12-03 13:53:52,049 - app.integrations.defender.repository - INFO - Inserted batch 44 (2000 records)
+2025-12-03 13:53:52,262 - app.integrations.defender.repository - INFO - Inserted batch 45 (2000 records)
+2025-12-03 13:53:52,499 - app.integrations.defender.repository - INFO - Inserted batch 46 (2000 records)
+2025-12-03 13:53:52,861 - app.integrations.defender.repository - INFO - Inserted batch 47 (2000 records)
+2025-12-03 13:53:53,099 - app.integrations.defender.repository - INFO - Inserted batch 48 (2000 records)
+2025-12-03 13:53:53,327 - app.integrations.defender.repository - INFO - Inserted batch 49 (2000 records)
+2025-12-03 13:53:53,641 - app.integrations.defender.repository - INFO - Inserted batch 50 (2000 records)
+2025-12-03 13:53:53,881 - app.integrations.defender.repository - INFO - Inserted batch 51 (2000 records)
+2025-12-03 13:53:54,116 - app.integrations.defender.repository - INFO - Inserted batch 52 (2000 records)
+2025-12-03 13:53:54,368 - app.integrations.defender.repository - INFO - Inserted batch 53 (2000 records)
+2025-12-03 13:53:54,761 - app.integrations.defender.repository - INFO - Inserted batch 54 (2000 records)
+2025-12-03 13:53:54,990 - app.integrations.defender.repository - INFO - Inserted batch 55 (2000 records)
+2025-12-03 13:53:55,206 - app.integrations.defender.repository - INFO - Inserted batch 56 (2000 records)
+2025-12-03 13:53:55,436 - app.integrations.defender.repository - INFO - Inserted batch 57 (2000 records)
+2025-12-03 13:53:55,985 - app.integrations.defender.repository - INFO - Inserted batch 58 (2000 records)
+2025-12-03 13:53:56,213 - app.integrations.defender.repository - INFO - Inserted batch 59 (2000 records)
+2025-12-03 13:53:56,432 - app.integrations.defender.repository - INFO - Inserted batch 60 (2000 records)
+2025-12-03 13:53:56,720 - app.integrations.defender.repository - INFO - Inserted batch 61 (2000 records)
+2025-12-03 13:53:56,945 - app.integrations.defender.repository - INFO - Inserted batch 62 (2000 records)
+2025-12-03 13:53:57,172 - app.integrations.defender.repository - INFO - Inserted batch 63 (2000 records)
+2025-12-03 13:53:57,399 - app.integrations.defender.repository - INFO - Inserted batch 64 (2000 records)
+2025-12-03 13:53:57,706 - app.integrations.defender.repository - INFO - Inserted batch 65 (2000 records)
+2025-12-03 13:53:58,098 - app.integrations.defender.repository - INFO - Inserted batch 66 (2000 records)
+2025-12-03 13:53:58,324 - app.integrations.defender.repository - INFO - Inserted batch 67 (2000 records)
+2025-12-03 13:53:58,585 - app.integrations.defender.repository - INFO - Inserted batch 68 (2000 records)
+2025-12-03 13:53:58,821 - app.integrations.defender.repository - INFO - Inserted batch 69 (2000 records)
+2025-12-03 13:53:59,032 - app.integrations.defender.repository - INFO - Inserted batch 70 (2000 records)
+2025-12-03 13:53:59,288 - app.integrations.defender.repository - INFO - Inserted batch 71 (2000 records)
+2025-12-03 13:53:59,548 - app.integrations.defender.repository - INFO - Inserted batch 72 (2000 records)
+2025-12-03 13:53:59,910 - app.integrations.defender.repository - INFO - Inserted batch 73 (2000 records)
+2025-12-03 13:54:00,163 - app.integrations.defender.repository - INFO - Inserted batch 74 (2000 records)
+2025-12-03 13:54:00,401 - app.integrations.defender.repository - INFO - Inserted batch 75 (2000 records)
+2025-12-03 13:54:00,727 - app.integrations.defender.repository - INFO - Inserted batch 76 (2000 records)
+2025-12-03 13:54:00,984 - app.integrations.defender.repository - INFO - Inserted batch 77 (2000 records)
+2025-12-03 13:54:01,209 - app.integrations.defender.repository - INFO - Inserted batch 78 (2000 records)
+2025-12-03 13:54:01,442 - app.integrations.defender.repository - INFO - Inserted batch 79 (2000 records)
+2025-12-03 13:54:01,822 - app.integrations.defender.repository - INFO - Inserted batch 80 (2000 records)
+2025-12-03 13:54:02,102 - app.integrations.defender.repository - INFO - Inserted batch 81 (2000 records)
+2025-12-03 13:54:02,336 - app.integrations.defender.repository - INFO - Inserted batch 82 (2000 records)
+2025-12-03 13:54:02,614 - app.integrations.defender.repository - INFO - Inserted batch 83 (2000 records)
+2025-12-03 13:54:02,917 - app.integrations.defender.repository - INFO - Inserted batch 84 (2000 records)
+2025-12-03 13:54:03,153 - app.integrations.defender.repository - INFO - Inserted batch 85 (2000 records)
+2025-12-03 13:54:03,394 - app.integrations.defender.repository - INFO - Inserted batch 86 (2000 records)
+2025-12-03 13:54:03,838 - app.integrations.defender.repository - INFO - Inserted batch 87 (2000 records)
+2025-12-03 13:54:04,083 - app.integrations.defender.repository - INFO - Inserted batch 88 (2000 records)
+2025-12-03 13:54:04,306 - app.integrations.defender.repository - INFO - Inserted batch 89 (2000 records)
+2025-12-03 13:54:04,557 - app.integrations.defender.repository - INFO - Inserted batch 90 (2000 records)
+2025-12-03 13:54:05,458 - app.integrations.defender.repository - INFO - Inserted batch 91 (2000 records)
+2025-12-03 13:54:05,766 - app.integrations.defender.repository - INFO - Inserted batch 92 (2000 records)
+2025-12-03 13:54:05,958 - app.integrations.defender.repository - INFO - Inserted batch 93 (1267 records)
+2025-12-03 13:54:06,328 - app.integrations.defender.repository - INFO - Successfully inserted 185267 records into temporary table
+2025-12-03 13:54:06,328 - app.integrations.defender.repository - INFO - Switching tables atomically...
+2025-12-03 13:54:06,399 - app.integrations.defender.repository - INFO - Renamed vulnerabilities to vulnerabilities_old
+2025-12-03 13:54:06,428 - app.integrations.defender.repository - INFO - Renamed vulnerabilities_temp to vulnerabilities
+2025-12-03 13:54:06,475 - app.integrations.defender.repository - INFO - Dropped old table vulnerabilities_old
+2025-12-03 13:54:06,475 - app.integrations.defender.repository - INFO - Verifying data was saved correctly...
+2025-12-03 13:54:06,739 - app.integrations.defender.repository - INFO - Verification: 185267 records found in vulnerabilities table
+2025-12-03 13:54:06,739 - app.integrations.defender.repository - INFO - Data verification successful: 185267 records match expected count
+2025-12-03 13:54:06,739 - app.integrations.defender.repository - INFO - Successfully saved 185267 vulnerability records using table switching method
+2025-12-03 13:54:06,928 - app.integrations.defender.sync - INFO - Database verification: 185267 records in database after save
+2025-12-03 13:54:06,929 - app.integrations.defender.sync - INFO - Device vulnerability details full sync completed, fetched 185267 records, saved 185267 records
+2025-12-03 13:54:06,945 - app.integrations.defender.repository - INFO - Sync time updated successfully: 2025-12-03 13:54:06.929086, type: full, records: 185267
+2025-12-03 13:54:06,946 - app.integrations.defender.sync - INFO - Sync time recorded: 2025-12-03 13:54:06.929086, records: 185267
+2025-12-03 13:54:07,050 - app.integrations.defender.sync - INFO - Starting vulnerability catalog sync...
+2025-12-03 13:54:07,050 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=0
+2025-12-03 13:54:14,685 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=0)
+2025-12-03 13:54:14,685 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=8000
+2025-12-03 13:54:23,637 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=8000)
+2025-12-03 13:54:23,637 - app.integrations.defender.api_client - INFO - Requesting vulnerability catalog: https://us.api.security.microsoft.com/api/vulnerabilities?$top=8000&$skip=16000
+2025-12-03 13:54:31,377 - app.integrations.defender.api_client - INFO - Fetched 8000 catalog records (skip=16000)
+2025-12-03 13:54:31,377 - app.integrations.defender.api_client - INFO - Total fetched 24000 vulnerability catalog records
+2025-12-03 13:54:31,378 - app.integrations.defender.service - INFO - Successfully fetched 24000 catalog records
+2025-12-03 13:54:31,378 - app.integrations.defender.sync - INFO - Catalog API returned 24000 records
+2025-12-03 13:54:32,999 - app.integrations.defender.repository - INFO - Saved/updated 24000 catalog records
+2025-12-03 13:54:33,005 - app.integrations.defender.sync - INFO - Catalog sync completed, 24000 records saved
+2025-12-03 13:54:33,012 - app.integrations.defender.sync - INFO - Creating snapshot after sync...
+2025-12-03 13:54:34,725 - app.integrations.defender.repository - INFO - Recording CVE-Device combinations for snapshot (deduplicating by CVE-Device)...
+2025-12-03 13:54:37,512 - app.integrations.defender.repository - INFO - Found 162986 unique CVE-Device combinations after deduplication
+2025-12-03 13:54:37,677 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 1 (2000 records)
+2025-12-03 13:54:37,772 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 2 (2000 records)
+2025-12-03 13:54:37,850 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 3 (2000 records)
+2025-12-03 13:54:37,920 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 4 (2000 records)
+2025-12-03 13:54:37,995 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 5 (2000 records)
+2025-12-03 13:54:38,069 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 6 (2000 records)
+2025-12-03 13:54:38,144 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 7 (2000 records)
+2025-12-03 13:54:38,215 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 8 (2000 records)
+2025-12-03 13:54:38,304 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 9 (2000 records)
+2025-12-03 13:54:38,381 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 10 (2000 records)
+2025-12-03 13:54:38,467 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 11 (2000 records)
+2025-12-03 13:54:38,547 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 12 (2000 records)
+2025-12-03 13:54:38,797 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 13 (2000 records)
+2025-12-03 13:54:38,898 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 14 (2000 records)
+2025-12-03 13:54:38,986 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 15 (2000 records)
+2025-12-03 13:54:39,072 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 16 (2000 records)
+2025-12-03 13:54:39,146 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 17 (2000 records)
+2025-12-03 13:54:39,224 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 18 (2000 records)
+2025-12-03 13:54:39,324 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 19 (2000 records)
+2025-12-03 13:54:39,401 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 20 (2000 records)
+2025-12-03 13:54:39,479 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 21 (2000 records)
+2025-12-03 13:54:39,555 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 22 (2000 records)
+2025-12-03 13:54:39,702 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 23 (2000 records)
+2025-12-03 13:54:39,803 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 24 (2000 records)
+2025-12-03 13:54:39,875 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 25 (2000 records)
+2025-12-03 13:54:39,945 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 26 (2000 records)
+2025-12-03 13:54:40,013 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 27 (2000 records)
+2025-12-03 13:54:40,082 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 28 (2000 records)
+2025-12-03 13:54:40,155 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 29 (2000 records)
+2025-12-03 13:54:40,227 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 30 (2000 records)
+2025-12-03 13:54:40,297 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 31 (2000 records)
+2025-12-03 13:54:40,363 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 32 (2000 records)
+2025-12-03 13:54:40,440 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 33 (2000 records)
+2025-12-03 13:54:40,515 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 34 (2000 records)
+2025-12-03 13:54:40,585 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 35 (2000 records)
+2025-12-03 13:54:40,735 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 36 (2000 records)
+2025-12-03 13:54:40,798 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 37 (2000 records)
+2025-12-03 13:54:40,868 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 38 (2000 records)
+2025-12-03 13:54:40,937 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 39 (2000 records)
+2025-12-03 13:54:41,012 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 40 (2000 records)
+2025-12-03 13:54:41,079 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 41 (2000 records)
+2025-12-03 13:54:41,151 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 42 (2000 records)
+2025-12-03 13:54:41,224 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 43 (2000 records)
+2025-12-03 13:54:41,292 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 44 (2000 records)
+2025-12-03 13:54:41,363 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 45 (2000 records)
+2025-12-03 13:54:41,433 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 46 (2000 records)
+2025-12-03 13:54:41,509 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 47 (2000 records)
+2025-12-03 13:54:41,580 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 48 (2000 records)
+2025-12-03 13:54:41,794 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 49 (2000 records)
+2025-12-03 13:54:41,861 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 50 (2000 records)
+2025-12-03 13:54:41,931 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 51 (2000 records)
+2025-12-03 13:54:42,001 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 52 (2000 records)
+2025-12-03 13:54:42,076 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 53 (2000 records)
+2025-12-03 13:54:42,146 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 54 (2000 records)
+2025-12-03 13:54:42,213 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 55 (2000 records)
+2025-12-03 13:54:42,282 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 56 (2000 records)
+2025-12-03 13:54:42,350 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 57 (2000 records)
+2025-12-03 13:54:42,423 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 58 (2000 records)
+2025-12-03 13:54:42,500 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 59 (2000 records)
+2025-12-03 13:54:42,570 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 60 (2000 records)
+2025-12-03 13:54:42,738 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 61 (2000 records)
+2025-12-03 13:54:42,809 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 62 (2000 records)
+2025-12-03 13:54:42,878 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 63 (2000 records)
+2025-12-03 13:54:42,950 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 64 (2000 records)
+2025-12-03 13:54:43,017 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 65 (2000 records)
+2025-12-03 13:54:43,092 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 66 (2000 records)
+2025-12-03 13:54:43,163 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 67 (2000 records)
+2025-12-03 13:54:43,232 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 68 (2000 records)
+2025-12-03 13:54:43,301 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 69 (2000 records)
+2025-12-03 13:54:43,380 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 70 (2000 records)
+2025-12-03 13:54:43,453 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 71 (2000 records)
+2025-12-03 13:54:43,525 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 72 (2000 records)
+2025-12-03 13:54:43,594 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 73 (2000 records)
+2025-12-03 13:54:43,738 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 74 (2000 records)
+2025-12-03 13:54:43,808 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 75 (2000 records)
+2025-12-03 13:54:43,877 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 76 (2000 records)
+2025-12-03 13:54:43,954 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 77 (2000 records)
+2025-12-03 13:54:44,024 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 78 (2000 records)
+2025-12-03 13:54:44,090 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 79 (2000 records)
+2025-12-03 13:54:44,159 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 80 (2000 records)
+2025-12-03 13:54:44,228 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 81 (2000 records)
+2025-12-03 13:54:44,260 - app.integrations.defender.repository - INFO - Inserted CVE-Device snapshot batch 82 (986 records)
+2025-12-03 13:54:44,306 - app.integrations.defender.repository - INFO - Snapshot recorded successfully, snapshot ID: 14, CVE-Device records: 162986
+2025-12-03 13:54:44,328 - app.integrations.defender.sync - INFO - Snapshot created successfully with ID: 14
+2025-12-03 13:54:44,328 - app.integrations.defender.sync - INFO - Full sync completed successfully
+2025-12-03 13:54:44,328 - app.integrations.defender.sync - INFO - Full sync process completed successfully
+2025-12-03 13:54:44,329 - app.integrations.defender.sync - INFO - Database connection closed
+2025-12-03 13:54:44,329 - app.integrations.defender.sync - INFO - Vulnerability data sync completed successfully

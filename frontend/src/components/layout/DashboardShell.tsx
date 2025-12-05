@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/context/useSidebar';
 import Sidebar from '@/components/Sidebar/Sidebar';
@@ -11,6 +12,8 @@ interface DashboardShellProps {
 
 const DashboardShell = ({ children }: DashboardShellProps) => {
   const { isCollapsed } = useSidebar();
+  const { pathname } = useLocation();
+  const showRightRail = pathname === '/';
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -25,14 +28,21 @@ const DashboardShell = ({ children }: DashboardShellProps) => {
         <MobileHeader />
         <div className="w-full px-4 py-6 lg:px-[var(--spacing-sides)] lg:py-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-[var(--spacing-gap)]">
-            <main className="col-span-1 lg:col-span-9">
+            <main
+              className={cn(
+                'col-span-1',
+                showRightRail ? 'lg:col-span-9' : 'lg:col-span-12',
+              )}
+            >
               <div className="space-y-6 pt-4 lg:pt-[var(--content-top-offset)]">
                 {children}
               </div>
             </main>
-            <aside className="col-span-3 hidden lg:block">
-              <RightRail />
-            </aside>
+            {showRightRail && (
+              <aside className="col-span-3 hidden lg:block">
+                <RightRail />
+              </aside>
+            )}
           </div>
         </div>
       </div>
