@@ -40,13 +40,19 @@ def get_vulnerabilities():
         if threat_intel_values:
             filters['threat_intel'] = threat_intel_values
 
-        # Add CVSS and date filters
+        # Add CVSS / EPSS and date filters
         cvss_min = request.args.get('cvss_min')
         cvss_max = request.args.get('cvss_max')
         if cvss_min:
             filters['cvss_min'] = cvss_min
         if cvss_max:
             filters['cvss_max'] = cvss_max
+        epss_min = request.args.get('epss_min')
+        epss_max = request.args.get('epss_max')
+        if epss_min:
+            filters['epss_min'] = epss_min
+        if epss_max:
+            filters['epss_max'] = epss_max
         
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
