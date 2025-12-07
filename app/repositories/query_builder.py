@@ -143,7 +143,7 @@ def build_vulnerability_filters(
     if filters:
         threat_intel_filter = filters.get('threat_intel')
         for field, value in filters.items():
-            if field in ['cvss_min', 'cvss_max', 'date_from', 'date_to', 'threat_intel']:
+            if field in ['cvss_min', 'cvss_max', 'epss_min', 'epss_max', 'date_from', 'date_to', 'threat_intel']:
                 continue
             if isinstance(value, list) and value:
                 placeholders = ','.join(['%s'] * len(value))
@@ -183,6 +183,14 @@ def build_vulnerability_filters(
         if cvss_max:
             where_clauses.append(f"{qualify('cvss_score')} <= %s")
             params.append(float(cvss_max))
+        epss_min = filters.get('epss_min')
+        epss_max = filters.get('epss_max')
+        if epss_min:
+            where_clauses.append(f"{qualify('cve_epss')} >= %s")
+            params.append(float(epss_min))
+        if epss_max:
+            where_clauses.append(f"{qualify('cve_epss')} <= %s")
+            params.append(float(epss_max))
         date_from = filters.get('date_from')
         date_to = filters.get('date_to')
         if date_from:

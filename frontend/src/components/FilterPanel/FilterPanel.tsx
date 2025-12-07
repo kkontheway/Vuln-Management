@@ -300,6 +300,32 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
               className="h-8 text-xs"
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-secondary">EPSS Min Score</label>
+            <Input
+              type="number"
+              value={filters.epss_min || ''}
+              onChange={(e) => handleFilterChange('epss_min', e.target.value)}
+              min="0"
+              max="1"
+              step="0.01"
+              placeholder="0.00"
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-secondary">EPSS Max Score</label>
+            <Input
+              type="number"
+              value={filters.epss_max || ''}
+              onChange={(e) => handleFilterChange('epss_max', e.target.value)}
+              min="0"
+              max="1"
+              step="0.01"
+              placeholder="1.00"
+              className="h-8 text-xs"
+            />
+          </div>
           <div className="space-y-2 relative" ref={vendorDropdownRef}>
             <label className="text-xs font-medium text-text-secondary">Software Vendor</label>
             <Button

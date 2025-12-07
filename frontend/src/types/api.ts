@@ -17,46 +17,28 @@ export interface PaginatedResponse<T> {
 export interface Vulnerability {
   id: string | number;
   cve_id: string;
-  cve_epss?: number;
   severity?: string;
-  platform?: string;
-  device_name?: string;
-  device_id?: string;
-  first_seen?: string;
-  last_seen?: string;
-  status?: string;
-  description?: string;
   cvss_score?: number;
-  // Additional fields that might come from API
-  vulnerability_severity_level?: string;
+  cve_epss?: number;
+  status?: string;
   os_platform?: string;
-  os_version?: string;
-  os_architecture?: string;
-  software_vendor?: string;
   software_name?: string;
-  software_version?: string;
-  exploitability_level?: string;
-  first_seen_timestamp?: string;
-  last_seen_timestamp?: string;
-  autopatch_covered?: boolean;
   metasploit_detected?: boolean;
   nuclei_detected?: boolean;
   recordfuture_detected?: boolean;
-  // Device and RBAC fields
+  affected_devices?: number;
+  last_seen_timestamp?: string;
+}
+
+export interface VulnerabilityDevice {
+  device_id?: string;
+  device_name?: string;
   rbac_group_name?: string;
-  // Security update fields
-  security_update_available?: boolean;
-  recommended_security_update?: string;
-  recommended_security_update_id?: string;
-  recommended_security_update_url?: string;
-  recommendation_reference?: string;
-  // Path fields (JSON)
-  disk_paths?: string[] | Record<string, unknown>;
-  registry_paths?: string[] | Record<string, unknown>;
-  // Timestamp fields
-  event_timestamp?: string;
-  last_synced?: string;
-  last_updated?: string;
+  os_platform?: string;
+  os_version?: string;
+  os_architecture?: string;
+  status?: string;
+  last_seen_timestamp?: string;
 }
 
 export interface VulnerabilityFilters {
@@ -68,6 +50,8 @@ export interface VulnerabilityFilters {
   exploitability?: string;
   cvss_min?: string;
   cvss_max?: string;
+  epss_min?: string;
+  epss_max?: string;
   os_platform?: string;
   exploitability_level?: string;
   software_vendor?: string | string[]; // Support both single value and array for multi-select
@@ -233,6 +217,7 @@ export interface VulnerabilityDetailEntry {
   epss?: number;
   affected_devices?: number;
   last_seen_timestamp?: string;
+  devices?: VulnerabilityDevice[];
 }
 
 // Recommendation Reports
