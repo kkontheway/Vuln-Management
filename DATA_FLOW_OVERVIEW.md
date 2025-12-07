@@ -6,7 +6,7 @@
 
 | 表 / 数据集 | 关键字段 | 写入来源 | 主要消费者 | 备注 |
 | --- | --- | --- | --- | --- |
-| `vulnerabilities` | `cve_id`, 设备/软件字段, `cvss_score`, `status`, `cve_epss`, `metasploit_detected`, `nuclei_detected`, `recordfuture_detected`, `last_synced` 等 | `app/integrations/defender/repository.save_vulnerabilities`（全量表切换），Threat intel 标记脚本，DuckDB enrichment 脚本（填充 `cve_epss`） | `/api/vulnerabilities`（表格）、`/api/statistics`、`/api/filter-options`、推荐和报表接口 | 同步时整表替换；`cve_epss` 离线更新后直接被列表、统计和 Detail 使用。 |
+| `vulnerabilities` | `cve_id`, 设备/软件字段, `cvss_score`, `status`, `cve_epss`, `cve_public_exploit`, `metasploit_detected`, `nuclei_detected`, `recordfuture_detected`, `last_synced` 等 | `app/integrations/defender/repository.save_vulnerabilities`（全量表切换），Threat intel 标记脚本，DuckDB enrichment（填充 `cve_epss`），KEV enrichment（刷新 `cve_public_exploit`） | `/api/vulnerabilities`（表格）、`/api/statistics`、`/api/filter-options`、推荐和报表接口 | 同步时整表替换；`cve_epss`、`cve_public_exploit` 离线更新后直接被列表、统计和 Detail 使用。 |
 | `rapid_vulnerabilities` | `cve_id`, `device_count`, `max_severity`, `source_*` 列 | `sync_threat_sources` 中 `_sync_source`（Metasploit 数据） | 计划用于情报面板/重叠统计 | 同步开始前 `TRUNCATE`，再批量插入。 |
 | `nuclei_vulnerabilities` | 同上 | 同上（Nuclei GitHub feed） | 同上 | 同上。 |
 | `recordfuture_indicators` | `indicator_type` (`ip`/`cve`), `indicator_value`, `metadata` | `recordfuture_service.save_indicators`（来自 `IPExtractBox` 或脚本） | `recordfuture_service._apply_recordfuture_detection_flags`（根据 `cve` 反写主表） | 只存原始指标，不直接驱动前端 UI。 |
@@ -26,6 +26,7 @@ Sync Modal (/api/sync-sources)
         v
 sync_service orchestrator --> [defender_vulnerabilities] --> vulnerabilities/snapshots/sync_state
                            -> [epss_enrichment]        --> vulnerabilities.cve_epss
+                           -> [kev_enrichment]         --> vulnerabilities.cve_public_exploit
                            -> [threat_feeds]           --> rapid/nuclei tables & detection flags
                            -> [recordfuture_flags]     --> recordfuture_detected 布尔列
 Rapid7/Nuclei feeds ----------------------------------------------^
@@ -42,6 +43,7 @@ RecordFuture 工具 --> recordfuture_indicators ---------------------+
 3. **核心 runner（当前版本）**：
    - `defender_vulnerabilities`: `perform_full_sync`，写 `vulnerabilities`、`sync_state`、`vulnerability_snapshots`。
    - `epss_enrichment`: 下载官方 CSV.gz，使用 DuckDB 清洗到临时文件并批量更新 `vulnerabilities.cve_epss`。
+   - `kev_enrichment`: 下载 CISA KEV JSON，解析 `cveID`，批量刷新 `vulnerabilities.cve_public_exploit`（仅存在于 KEV 的 CVE 才为 TRUE）。
    - `threat_feeds`: 调 `sync_threat_sources`，刷新 `rapid_vulnerabilities`/`nuclei_vulnerabilities` 与布尔标记。
    - `recordfuture_flags`: 调 `rebuild_detection_flags`，根据 `recordfuture_indicators` 清零并重建 `recordfuture_detected`。
 4. **未纳入 orchestrator 的内容**：RecordFuture 指标录入、ServiceNow/AI 功能、`stats:overview` 缓存（仍需 TTL 或手动清理）。
@@ -69,10 +71,19 @@ RecordFuture 工具 --> recordfuture_indicators ---------------------+
   - 仅“这次”传入的 CVE 会被标记；老数据需要手工重放（示例脚本见我们刚执行的 `python` 片段），或等待下一次 Sync 勾选 `recordfuture_flags` 时自动重放。
   - 自动阶段会先清零，再根据 `recordfuture_indicators` 中的所有 `cve` 重新打标；若需撤销仍需人工 `UPDATE ... SET recordfuture_detected = FALSE`。
 
-### 2.4 统计与缓存
+### 2.4 KEV（CISA Known Exploited Vulnerabilities）
+- **触发**：Sync 弹窗勾选 `kev_enrichment`（默认开启）。
+- **流程**：`kev_enrichment` runner 流式下载官方 JSON（支持 gzip），落地临时文件后解析 `vulnerabilities` 列表，全量提取并标准化 `cveID`。
+- **数据库写入**：
+  1. 创建临时表 `kev_enrichment_tmp` 批量写入本次 KEV 中的所有 CVE。
+  2. 先把主表中“已标记但不在 KEV” 的行设为 `cve_public_exploit = FALSE`。
+  3. 再把命中临时表的 CVE 设为 `TRUE`（不存在的保持 `FALSE` 或 `NULL`）。
+- **前端效果**：`VulnerabilityTable` 的 KEV 列、过滤器中的 KEV 选项，以及 Detail 弹窗的 Public Exploit 状态都会立即从主表读取到最新布尔值。
+
+### 2.5 统计与缓存
 - `vulnerability_service.get_statistics` 会汇总多个仓储函数（严重度、平台、厂商、exploitability、年龄、Autopatch、RSS、threat feed 重叠、EPSS bucket、新增 7 天）并写入 Redis 缓存 `stats:overview`，TTL 300 秒。同步完成后如需立即刷新 Dashboard，可清缓存或在后台调用 `cache_set` 逻辑。
 
-### 2.5 Sync 进度
+### 2.6 Sync 进度
 - `sync_service` 在内存/Redis 保存 `sync_progress`，前端轮询 `/api/sync-progress` 每 2 秒更新。若线程异常结束，会把状态切到 `error`。
 
 ## 3. 前端数据消费一览

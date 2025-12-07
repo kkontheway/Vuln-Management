@@ -8,6 +8,7 @@ from .defender_vulnerabilities import run as run_defender_vulnerabilities
 from .epss_enrichment import run as run_epss_enrichment
 from .threat_feeds import run as run_threat_feeds
 from .recordfuture_flags import run as run_recordfuture_flags
+from .kev_enrichment import run as run_kev_enrichment
 
 
 SYNC_SOURCES: List[SyncSource] = [
@@ -18,6 +19,14 @@ SYNC_SOURCES: List[SyncSource] = [
         description="Full ingestion from Microsoft Defender SoftwareVulnerabilitiesByMachine (includes snapshot).",
         default_enabled=True,
         runner=run_defender_vulnerabilities,
+    ),
+    SyncSource(
+        order=25,
+        key="kev_enrichment",
+        name="CISA KEV Enrichment",
+        description="Download the latest CISA KEV feed and update vulnerabilities.cve_public_exploit.",
+        default_enabled=True,
+        runner=run_kev_enrichment,
     ),
     SyncSource(
         order=15,
