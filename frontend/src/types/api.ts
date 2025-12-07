@@ -24,6 +24,7 @@ export interface Vulnerability {
   status?: string;
   os_platform?: string;
   software_name?: string;
+  exploitability_level?: string;
   metasploit_detected?: boolean;
   nuclei_detected?: boolean;
   recordfuture_detected?: boolean;
@@ -210,6 +211,10 @@ export interface FixedVulnerability {
 
 export interface FixedVulnerabilitiesResponse {
   data: FixedVulnerability[];
+}
+
+export interface PatchThisResponse {
+  data: Vulnerability[];
 }
 
 export interface VulnerabilityDetailEntry {

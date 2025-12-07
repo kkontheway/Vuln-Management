@@ -16,6 +16,7 @@ import type {
   VulnerabilityDetailEntry,
   SyncSourceDefinition,
   SyncProgressSource,
+  PatchThisResponse,
 } from '@/types/api';
 import type {
   ServiceNowTicketCreate,
@@ -139,6 +140,11 @@ export const apiService = {
 
   getFixedVulnerabilities: async (limit: number = 50): Promise<FixedVulnerabilitiesResponse> => {
     const response = await api.get<FixedVulnerabilitiesResponse>('/fixed-vulnerabilities', { params: { limit } });
+    return response.data;
+  },
+
+  getPatchThisVulnerabilities: async (limit: number = 20): Promise<PatchThisResponse> => {
+    const response = await api.get<PatchThisResponse>('/patch-this', { params: { limit } });
     return response.data;
   },
 

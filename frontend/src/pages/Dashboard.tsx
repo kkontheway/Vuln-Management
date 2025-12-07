@@ -5,10 +5,11 @@ import LineChart from '../components/Charts/LineChart';
 import BarChart from '../components/Charts/BarChart';
 import VulnerabilityTrendCard from '../components/Cards/VulnerabilityTrendCard';
 import FixedVulnerabilitiesTable from '../components/Tables/FixedVulnerabilitiesTable';
+import PatchThisTable from '../components/Tables/PatchThisTable';
 import EpssAnalyticsSection from '../components/Cards/EpssAnalyticsSection';
 import IntelligenceFeedOverlapChart from '../components/Charts/IntelligenceFeedOverlapChart';
 import apiService from '../services/api';
-import type { ChartData, SnapshotsTrendResponse, AgeDistributionData, AutopatchCoverage, FixedVulnerability } from '@/types/api';
+import type { ChartData, SnapshotsTrendResponse, AgeDistributionData, AutopatchCoverage, FixedVulnerability, Vulnerability } from '@/types/api';
 
 const Dashboard = () => {
   const [statistics, setStatistics] = useState<{
@@ -30,13 +31,15 @@ const Dashboard = () => {
   });
   const [trendData, setTrendData] = useState<SnapshotsTrendResponse['trend']>([]);
   const [fixedVulnerabilities, setFixedVulnerabilities] = useState<FixedVulnerability[]>([]);
+  const [patchThisData, setPatchThisData] = useState<Vulnerability[]>([]);
 
   const loadData = useCallback(async () => {
     try {
-      const [statsResponse, trendResponse, fixedResponse] = await Promise.all([
+      const [statsResponse, trendResponse, fixedResponse, patchResponse] = await Promise.all([
         apiService.getStatistics(),
         apiService.getSnapshotsTrend(),
         apiService.getFixedVulnerabilities(50),
+        apiService.getPatchThisVulnerabilities(20),
       ]);
 
       setStatistics({
@@ -50,6 +53,7 @@ const Dashboard = () => {
       });
       setTrendData(trendResponse.trend || []);
       setFixedVulnerabilities(fixedResponse.data || []);
+      setPatchThisData(patchResponse.data || []);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     }
@@ -88,6 +92,8 @@ const Dashboard = () => {
             totalNew={statistics.new_vulnerabilities_7days}
           />
         </div>
+
+        <PatchThisTable data={patchThisData} />
 
         <FixedVulnerabilitiesTable data={fixedVulnerabilities} limit={10} />
 

@@ -75,6 +75,18 @@ def get_vulnerabilities():
         return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/patch-this', methods=['GET'])
+def get_patch_this():
+    """Return high-priority vulnerabilities for PatchThis widget."""
+    try:
+        limit = int(request.args.get('limit', 20))
+        data = vuln_service.get_patchthis_vulnerabilities(limit=limit)
+        return jsonify({'data': data})
+    except Exception as e:
+        logger.error(f"获取PatchThis数据时出错: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @bp.route('/statistics', methods=['GET'])
 def get_statistics():
     """Get vulnerability statistics for charts."""
