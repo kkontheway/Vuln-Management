@@ -19,6 +19,8 @@ interface FilterPanelProps {
   onFilterChange: (filters: VulnerabilityFilters) => void;
 }
 
+type EpssBucket = 'all' | 'low' | 'medium' | 'high' | 'critical';
+
 const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
   const [filters, setFilters] = useState<VulnerabilityFilters>({
     cve_id: '',
@@ -29,6 +31,8 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     exploitability: '',
     cvss_min: '',
     cvss_max: '',
+    epss_min: '',
+    epss_max: '',
     threat_intel: [],
   });
   const [filterOptions, setFilterOptions] = useState<{
@@ -50,11 +54,18 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
   const vendorDropdownRef = useRef<HTMLDivElement>(null);
   const [threatIntelDropdownOpen, setThreatIntelDropdownOpen] = useState(false);
   const threatIntelDropdownRef = useRef<HTMLDivElement>(null);
+  const [epssBucket, setEpssBucket] = useState<EpssBucket>('all');
   const threatIntelOptions = [
     { label: 'Metasploit', value: 'metasploit' },
     { label: 'Nuclei', value: 'nuclei' },
     { label: 'RecordFuture', value: 'recordfuture' },
   ];
+  const epssRangeMap: Record<Exclude<EpssBucket, 'all'>, { min: string; max: string }> = {
+    low: { min: '0', max: '0.5' },
+    medium: { min: '0.5', max: '0.8' },
+    high: { min: '0.8', max: '0.9' },
+    critical: { min: '0.9', max: '' },
+  };
 
   useEffect(() => {
     void loadFilterOptions();
@@ -126,6 +137,18 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     return filters.threat_intel ? [filters.threat_intel] : [];
   };
 
+  const handleEpssBucketChange = (bucket: EpssBucket) => {
+    setEpssBucket(bucket);
+    if (bucket === 'all') {
+      handleFilterChange('epss_min', '');
+      handleFilterChange('epss_max', '');
+      return;
+    }
+    const range = epssRangeMap[bucket];
+    handleFilterChange('epss_min', range.min);
+    handleFilterChange('epss_max', range.max);
+  };
+
   const applyFilters = () => {
     // Convert 'all' values back to empty strings for API
     const apiFilters: VulnerabilityFilters = {
@@ -154,10 +177,13 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
       exploitability: '',
       cvss_min: '',
       cvss_max: '',
+      epss_min: '',
+      epss_max: '',
       software_vendor: '',
       threat_intel: [],
     };
     setFilters(clearedFilters);
+    setEpssBucket('all');
     onFilterChange(clearedFilters);
   };
 
@@ -301,30 +327,22 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-text-secondary">EPSS Min Score</label>
-            <Input
-              type="number"
-              value={filters.epss_min || ''}
-              onChange={(e) => handleFilterChange('epss_min', e.target.value)}
-              min="0"
-              max="1"
-              step="0.01"
-              placeholder="0.00"
-              className="h-8 text-xs"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-text-secondary">EPSS Max Score</label>
-            <Input
-              type="number"
-              value={filters.epss_max || ''}
-              onChange={(e) => handleFilterChange('epss_max', e.target.value)}
-              min="0"
-              max="1"
-              step="0.01"
-              placeholder="1.00"
-              className="h-8 text-xs"
-            />
+            <label className="text-xs font-medium text-text-secondary">EPSS Score</label>
+            <Select
+              value={epssBucket}
+              onValueChange={(value) => handleEpssBucketChange(value as EpssBucket)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="low">Low (0 - 0.5)</SelectItem>
+                <SelectItem value="medium">Medium (0.5 - 0.8)</SelectItem>
+                <SelectItem value="high">High (0.8 - 0.9)</SelectItem>
+                <SelectItem value="critical">Critical (&gt; 0.9)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2 relative" ref={vendorDropdownRef}>
             <label className="text-xs font-medium text-text-secondary">Software Vendor</label>
