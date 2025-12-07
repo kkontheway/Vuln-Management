@@ -65,13 +65,13 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
     if (value) {
       return (
         <span className={`${baseClass} bg-red-500/10 text-red-500 border-red-500/30`}>
-          KEV
+          True
         </span>
       );
     }
     return (
       <span className={`${baseClass} bg-blue-500/10 text-blue-500 border-blue-500/30`}>
-        No KEV
+        False
       </span>
     );
   };
@@ -92,24 +92,10 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
         </span>
       );
     }
-    if (vuln.cve_public_exploit) {
-      tags.push(
-        <span key="kev-flag" className="px-2 py-0.5 text-xs rounded-full bg-red-500/10 text-red-500 border border-red-500/30">
-          Public Exploit
-        </span>
-      );
-    }
     if (vuln.recordfuture_detected) {
       tags.push(
         <span key="rf" className="px-2 py-0.5 text-xs rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
           RecordFuture
-        </span>
-      );
-    }
-    if (vuln.metasploit_detected || vuln.nuclei_detected) {
-      tags.push(
-        <span key="poc" className="px-2 py-0.5 text-xs rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/30">
-          Public PoC
         </span>
       );
     }
@@ -131,40 +117,42 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>CVE ID</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>EPSS</TableHead>
-                  <TableHead>KEV</TableHead>
-                  <TableHead>Signals</TableHead>
-                  <TableHead>Reasons</TableHead>
-                  <TableHead>Last Seen</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((item) => (
-                  <TableRow key={item.cve_id}>
-                    <TableCell className="font-semibold text-text-primary">
-                      {item.cve_id}
-                    </TableCell>
-                    <TableCell>{renderSeverityBadge(item.severity)}</TableCell>
-                    <TableCell>{typeof item.cve_epss === 'number' ? item.cve_epss.toFixed(3) : '-'}</TableCell>
-                    <TableCell>{renderKevBadge(item.cve_public_exploit)}</TableCell>
-                    <TableCell>{renderThreatIntelBadges(item)}</TableCell>
-                    <TableCell>{renderReasonTags(item)}</TableCell>
-                    <TableCell>{formatDate(item.last_seen_timestamp)}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => handleViewDetails(item)}>
-                        Details
-                      </Button>
-                    </TableCell>
+            <div className="max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>CVE ID</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>EPSS</TableHead>
+                    <TableHead>KEV</TableHead>
+                    <TableHead>Signals</TableHead>
+                    <TableHead>Reasons</TableHead>
+                    <TableHead>Last Seen</TableHead>
+                    <TableHead>Action</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data.map((item) => (
+                    <TableRow key={item.cve_id}>
+                      <TableCell className="font-semibold text-text-primary">
+                        {item.cve_id}
+                      </TableCell>
+                      <TableCell>{renderSeverityBadge(item.severity)}</TableCell>
+                      <TableCell>{typeof item.cve_epss === 'number' ? item.cve_epss.toFixed(3) : '-'}</TableCell>
+                      <TableCell>{renderKevBadge(item.cve_public_exploit)}</TableCell>
+                      <TableCell>{renderThreatIntelBadges(item)}</TableCell>
+                      <TableCell>{renderReasonTags(item)}</TableCell>
+                      <TableCell>{formatDate(item.last_seen_timestamp)}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(item)}>
+                          Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </CardContent>
