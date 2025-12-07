@@ -22,7 +22,8 @@ def get_vulnerabilities():
         filter_fields = [
             'cve_id', 'device_name', 'os_platform', 'os_version',
             'software_vendor', 'software_name', 'vulnerability_severity_level',
-            'status', 'exploitability_level', 'rbac_group_name'
+            'status', 'exploitability_level', 'rbac_group_name',
+            'cve_public_exploit'
         ]
         
         for field in filter_fields:

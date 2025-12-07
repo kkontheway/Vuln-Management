@@ -20,6 +20,7 @@ export interface Vulnerability {
   severity?: string;
   cvss_score?: number;
   cve_epss?: number;
+  cve_public_exploit?: boolean;
   status?: string;
   os_platform?: string;
   software_name?: string;
@@ -56,6 +57,7 @@ export interface VulnerabilityFilters {
   exploitability_level?: string;
   software_vendor?: string | string[]; // Support both single value and array for multi-select
   threat_intel?: string | string[];
+  cve_public_exploit?: string;
 }
 
 // Statistics
@@ -215,6 +217,7 @@ export interface VulnerabilityDetailEntry {
   severity?: string;
   cvss_v3?: number;
   epss?: number;
+  cve_public_exploit?: boolean;
   affected_devices?: number;
   last_seen_timestamp?: string;
   devices?: VulnerabilityDevice[];

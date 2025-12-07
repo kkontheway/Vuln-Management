@@ -33,6 +33,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     cvss_max: '',
     epss_min: '',
     epss_max: '',
+    cve_public_exploit: '',
     threat_intel: [],
   });
   const [filterOptions, setFilterOptions] = useState<{
@@ -156,6 +157,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
       severity: filters.severity === 'all' ? '' : filters.severity,
       status: filters.status === 'all' ? '' : filters.status,
       platform: filters.platform === 'all' ? '' : filters.platform,
+      cve_public_exploit: filters.cve_public_exploit === 'all' ? '' : filters.cve_public_exploit,
       // Keep software_vendor as array if it's an array, or convert to empty string if empty
       software_vendor: Array.isArray(filters.software_vendor) && filters.software_vendor.length > 0
         ? filters.software_vendor
@@ -179,6 +181,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
       cvss_max: '',
       epss_min: '',
       epss_max: '',
+      cve_public_exploit: '',
       software_vendor: '',
       threat_intel: [],
     };
@@ -341,6 +344,22 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
                 <SelectItem value="medium">Medium (0.5 - 0.8)</SelectItem>
                 <SelectItem value="high">High (0.8 - 0.9)</SelectItem>
                 <SelectItem value="critical">Critical (&gt; 0.9)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-secondary">KEV</label>
+            <Select
+              value={filters.cve_public_exploit || 'all'}
+              onValueChange={(value) => handleFilterChange('cve_public_exploit', value)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">True</SelectItem>
+                <SelectItem value="false">False</SelectItem>
               </SelectContent>
             </Select>
           </div>
