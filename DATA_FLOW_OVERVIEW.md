@@ -25,8 +25,9 @@ Sync Modal (/api/sync-sources)
         |
         v
 sync_service orchestrator --> [defender_vulnerabilities] --> vulnerabilities/snapshots/sync_state
-                           -> [threat_feeds]            --> rapid/nuclei tables & detection flags
-                           -> [recordfuture_flags]      --> recordfuture_detected 布尔列
+                           -> [epss_enrichment]        --> vulnerabilities.cve_epss
+                           -> [threat_feeds]           --> rapid/nuclei tables & detection flags
+                           -> [recordfuture_flags]     --> recordfuture_detected 布尔列
 Rapid7/Nuclei feeds ----------------------------------------------^
 RecordFuture 工具 --> recordfuture_indicators ---------------------+
 ```
@@ -36,15 +37,14 @@ RecordFuture 工具 --> recordfuture_indicators ---------------------+
 ### 2.1 Orchestrator 式同步（多数据源）
 1. **触发**：Header Sync 按钮弹出数据源多选弹窗（`/api/sync-sources` 提供列表），确认后调用 `apiService.triggerSync(selectedKeys)` → `/api/sync`。
 2. ** orchestrator 流程**（`app/services/sync_service.py`）：
-   - 根据用户勾选过滤 registry，保持既定顺序（默认勾选 `defender_vulnerabilities`、`threat_feeds`、`recordfuture_flags`）。
-   - 每个数据源只负责“同步”自身数据，runner 返回结果或抛错；`sync_progress.sources` 记录 `pending/running/success/error`。
-   - 任何 runner 失败都会立即终止后续步骤，避免脏数据串联。
+   - 根据用户勾选过滤 registry，保持既定顺序（默认勾选 `defender_vulnerabilities`、`epss_enrichment`、`threat_feeds`、`recordfuture_flags`）。
+   - 每个 runner 只负责“同步”自身数据，`sync_progress.sources` 记录 `pending/running/success/error`，任意 runner 失败都会中止后续步骤。
 3. **核心 runner（当前版本）**：
-   - `defender_vulnerabilities`: 直接调用 `perform_full_sync`，写 `vulnerabilities`、`sync_state`、`vulnerability_snapshots`。
-   - `threat_feeds`: 调 `sync_threat_sources`，下载 Rapid7/Nuclei feed、刷新 `rapid_vulnerabilities`/`nuclei_vulnerabilities` 与布尔标记。
-   - `recordfuture_flags`: 调 `rebuild_detection_flags`，根据 `recordfuture_indicators` 重置/回写 `recordfuture_detected`。
-   - 后续若有 DuckDB EPS S enrich、其他外部源，只需新增 runner 并在 registry 注册即可。
-4. **未纳入 orchestrator 的内容**：RecordFuture 指标仍需单独录入、ServiceNow/AI 功能、`cve_epss` DuckDB enrichment（离线脚本）、`stats:overview` 缓存（需 TTL 或手动清除）。
+   - `defender_vulnerabilities`: `perform_full_sync`，写 `vulnerabilities`、`sync_state`、`vulnerability_snapshots`。
+   - `epss_enrichment`: 下载官方 CSV.gz，使用 DuckDB 清洗到临时文件并批量更新 `vulnerabilities.cve_epss`。
+   - `threat_feeds`: 调 `sync_threat_sources`，刷新 `rapid_vulnerabilities`/`nuclei_vulnerabilities` 与布尔标记。
+   - `recordfuture_flags`: 调 `rebuild_detection_flags`，根据 `recordfuture_indicators` 清零并重建 `recordfuture_detected`。
+4. **未纳入 orchestrator 的内容**：RecordFuture 指标录入、ServiceNow/AI 功能、`stats:overview` 缓存（仍需 TTL 或手动清理）。
 
 ### 2.2 Threat Intel Feed 刷新（Rapid/Nuclei）
 - **触发**：当用户在 Sync 弹窗中勾选 `threat_feeds` 时，orchestrator 会在 Defender runner 之后执行 `sync_threat_sources()`。
@@ -96,19 +96,19 @@ RecordFuture 工具 --> recordfuture_indicators ---------------------+
 
 1. **用户点击 Header 的 Sync** → 弹窗列出 registry 中的同步源（复选框 + 描述）。提交后 `/api/sync` 将所选 key 传给 orchestrator。
 2. **阶段/进度展示**：
-   - `sync_progress.sources` 会列出每个模块的实时状态（Pending → Running → Success/Error），前端在 Header 进度条下展示文字列表。
-   - 默认顺序：`defender_vulnerabilities` → `threat_feeds` → `recordfuture_flags`，可根据需要取消勾选任意模块。
+   - `sync_progress.sources` 会列出每个 runner 的实时状态（Pending → Running → Success/Error），Header 右上角同步显示。
+   - 默认顺序：`defender_vulnerabilities` → `epss_enrichment` → `threat_feeds` → `recordfuture_flags`，可按需勾选。
 3. **自动更新的内容**：取决于所选模块。例如：
    - 仅勾选 `defender_vulnerabilities`：刷新 `vulnerabilities`、`sync_state`、`vulnerability_snapshots`。
+   - 勾选 `epss_enrichment`：下载最新 EPSS CSV.gz，DuckDB 清洗后批量更新 `vulnerabilities.cve_epss`。
    - 勾选 `threat_feeds`：额外刷新 `rapid_vulnerabilities`/`nuclei_vulnerabilities` 与 `metasploit_detected`/`nuclei_detected`。
    - 勾选 `recordfuture_flags`：重放 `recordfuture_detected`。
 4. **不会自动更新的内容**：
    - `recordfuture_indicators`（仍需 Tools/脚本新增指标）。
-   - `cve_epss` enrichment（DuckDB 离线脚本）。
    - ServiceNow/AI/Recommendation 相关数据。
-   - 已有 Redis 缓存（如 `stats:overview`）；需要等待 TTL 或手动清理。
+   - Redis 缓存（如 `stats:overview`）；需要等待 TTL 或手动清理。
    - 前端本地状态：`VulnerabilityTable` 需重新进入或切换过滤条件才会重新请求。
-5. **潜在影响**：若勾选的威胁情报模块失败，orchestrator 会在该阶段直接停止，并在 progress 中标记 error；确保 GitHub/网络可访问以避免 Rapid/Nuclei 下载失败。
+5. **潜在影响**：若下载 Rapid7/Nuclei feed 或 EPSS CSV 失败，orchestrator 会在该阶段停止并标记 error；检查网络/日志后可重新只勾选失败的 runner。
 
 ## 5. 快速定位 RecordFuture 徽章缺失
 

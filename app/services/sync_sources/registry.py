@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from .base import SyncSource
 from .defender_vulnerabilities import run as run_defender_vulnerabilities
+from .epss_enrichment import run as run_epss_enrichment
 from .threat_feeds import run as run_threat_feeds
 from .recordfuture_flags import run as run_recordfuture_flags
 
@@ -17,6 +18,14 @@ SYNC_SOURCES: List[SyncSource] = [
         description="Full ingestion from Microsoft Defender SoftwareVulnerabilitiesByMachine (includes snapshot).",
         default_enabled=True,
         runner=run_defender_vulnerabilities,
+    ),
+    SyncSource(
+        order=15,
+        key="epss_enrichment",
+        name="EPSS Enrichment (DuckDB)",
+        description="Download latest EPSS dataset via DuckDB and update vulnerabilities.cve_epss.",
+        default_enabled=True,
+        runner=run_epss_enrichment,
     ),
     SyncSource(
         order=20,

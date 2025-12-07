@@ -448,8 +448,9 @@ Sync Modal (/api/sync-sources)
         |
         v
 sync_service orchestrator --&gt; [defender_vulnerabilities] --&gt; vulnerabilities/snapshots/sync_state
-                           --&gt; [threat_feeds]            --&gt; rapid/nuclei tables &amp; detection flags
-                           --&gt; [recordfuture_flags]      --&gt; recordfuture_detected
+                           --&gt; [epss_enrichment]        --&gt; vulnerabilities.cve_epss
+                           --&gt; [threat_feeds]           --&gt; rapid/nuclei tables &amp; detection flags
+                           --&gt; [recordfuture_flags]     --&gt; recordfuture_detected
 Rapid7/Nuclei feeds ----------------------------------------------^
 RecordFuture 工具 --&gt; recordfuture_indicators ---------------------+
 </div></code></pre>
@@ -461,11 +462,13 @@ RecordFuture 工具 --&gt; recordfuture_indicators ---------------------+
 <li><strong>核心 runner（当前版本）</strong>：
 <ul>
 <li><code>defender_vulnerabilities</code>：调用 <code>perform_full_sync</code>，写入 <code>vulnerabilities</code>、<code>sync_state</code>、<code>vulnerability_snapshots</code>。</li>
+<li><code>epss_enrichment</code>：下载官方 CSV.gz，使用 DuckDB 清洗并批量更新 <code>vulnerabilities.cve_epss</code>。</li>
 <li><code>threat_feeds</code>：执行 <code>sync_threat_sources</code>，刷新 Rapid7/Nuclei feed 以及相关检测标记。</li>
 <li><code>recordfuture_flags</code>：执行 <code>rebuild_detection_flags</code>，根据 <code>recordfuture_indicators</code> 重置 <code>recordfuture_detected</code>。</li>
 </ul>
 </li>
-<li><strong>未纳入 orchestrator 的内容</strong>：RecordFuture 指标录入、ServiceNow/AI/Recommendation、DuckDB EPS S enrichment、Redis <code>stats:overview</code> 缓存（需 TTL 或手动清理）。</li>
+<li><strong>输出</strong>：只有被勾选的 runner 会运行；新增数据源只需注册即可出现在弹窗和 orchestrator 中。</li>
+<li><strong>未纳入 orchestrator 的内容</strong>：RecordFuture 指标录入、ServiceNow/AI/Recommendation、Redis <code>stats:overview</code> 缓存（需 TTL 或手动清理）。</li>
 </ol>
 <h3 id="22-threat-intel-feed-%E5%88%B7%E6%96%B0rapidnuclei">2.2 Threat Intel Feed 刷新（Rapid/Nuclei）</h3>
 <ul>
@@ -597,20 +600,19 @@ RecordFuture 工具 --&gt; recordfuture_indicators ---------------------+
 <li><strong>阶段/进度展示</strong>：
 <ul>
 <li><code>sync_progress.sources</code> 列出每个 runner 的状态（Pending/Running/Success/Error），Header 右上角会同步显示列表。</li>
-<li>默认顺序：<code>defender_vulnerabilities</code> → <code>threat_feeds</code> → <code>recordfuture_flags</code>，可按需取消勾选。</li>
+<li>默认顺序：<code>defender_vulnerabilities</code> → <code>epss_enrichment</code> → <code>threat_feeds</code> → <code>recordfuture_flags</code>，可按需取消勾选。</li>
 </ul>
 </li>
-<li><strong>自动更新的内容</strong>：取决于所选 runner。例如仅选 Defender 就只刷新 <code>vulnerabilities</code>/<code>sync_state</code>/<code>vulnerability_snapshots</code>；勾选 Threat feeds/RecordFuture 则会额外刷新对应表与布尔标记。</li>
+<li><strong>自动更新的内容</strong>：取决于所选 runner。例如仅选 Defender 就只刷新 <code>vulnerabilities</code>/<code>sync_state</code>/<code>vulnerability_snapshots</code>；勾选 EPSS/Threat feeds/RecordFuture 则会额外刷新对应列与布尔标记。</li>
 <li><strong>不会自动更新的内容</strong>：
 <ul>
 <li><code>recordfuture_indicators</code>（仍需 Tools/脚本新增指标）。</li>
-<li><code>cve_epss</code> enrichment（DuckDB 导入），需独立脚本。</li>
 <li>ServiceNow / AI / Recommendation 数据。</li>
 <li>Redis 缓存（如 <code>stats:overview</code>）。</li>
 <li>前端本地状态：<code>VulnerabilityTable</code> 需重新进入或切换过滤条件才会重新 <code>fetch</code>。</li>
 </ul>
 </li>
-<li><strong>潜在影响</strong>：若下载 Rapid7/Nuclei feed 失败或 runner 抛错，orchestrator 会停止在该阶段并在进度列表中标记 <code>error</code>；请检查网络与日志。</li>
+<li><strong>潜在影响</strong>：若下载 Rapid7/Nuclei feed 或 EPSS CSV 失败，orchestrator 会停止在该阶段并在进度列表中标记 <code>error</code>；请检查网络与日志。</li>
 </ol>
 <h2 id="5-%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D-recordfuture-%E5%BE%BD%E7%AB%A0%E7%BC%BA%E5%A4%B1">5. 快速定位 RecordFuture 徽章缺失</h2>
 <ol>
