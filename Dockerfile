@@ -30,4 +30,4 @@ COPY . .
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 EXPOSE 5001
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "app:app"]
+CMD ["python", "app.py"]
