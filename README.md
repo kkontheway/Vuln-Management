@@ -26,86 +26,104 @@ VulnManagement/
 └── README.md          # 说明文档
 ```
 
-## 安装步骤
+## 安装步骤（Step by Step）
 
-### 1. 安装Python依赖
-
+### 1. 用 Docker 启动 MySQL 8.0
 ```bash
-pip install -r requirements.txt
+docker run -d \
+  --name mysql-db \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=change-this-root-password \
+  -e MYSQL_DATABASE=vulndb \
+  -e MYSQL_USER=vuln_app \
+  -e MYSQL_PASSWORD=vuln_app_password \
+  mysql:8.0 \
+  --character-set-server=utf8mb4 \
+  --collation-server=utf8mb4_unicode_ci
 ```
+- `MYSQL_DATABASE/USER/PASSWORD` 请与 `.env` 中保持一致。
+- 容器启动后可用 `mysql -h127.0.0.1 -P3306 -uroot -p` 和 `docker logs mysql-db` 检查状态。
 
-### 2. 配置环境变量
-
-复制 `.env.example` 为 `.env`（本地开发）或 `.env.prod`（服务器），并确保 `ENV_FILE_PATH` 指向当前文件（例如 `.env.prod`）。`INTEGRATIONS_SECRET_KEY` 可以使用 `python - <<'PY'` 生成随机密钥：
-
+### 2. 导入历史数据（dump.sql）
 ```bash
-python - <<'PY'
-import os, base64
-print(base64.urlsafe_b64encode(os.urandom(32)).decode())
-PY
+# 将 dump.sql 上传到服务器（示例）
+scp dump.sql user@server:/opt/vuln/dump.sql
+
+# 通过 docker exec 导入
+cat /opt/vuln/dump.sql | docker exec -i mysql-db \
+  mysql -uroot -p"$MYSQL_ROOT_PASSWORD" vulndb
 ```
+- 如果 dump 内含 `CREATE DATABASE`，可先执行 `docker exec -it mysql-db mysql -uroot -p -e "DROP DATABASE IF EXISTS vulndb; CREATE DATABASE vulndb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"`。
+- 导入完成后使用 `mysql -h127.0.0.1 -P3306 -uvuln_app -p vulndb -e "SHOW TABLES;"` 验证。
 
-`.env` 中需要包含以下变量：
-
+### 3. 配置环境变量
+- 本地：`cp .env.example .env`
+- 服务器：`cp .env.example .env.prod`
+- 至少需要设置：
 ```env
-# Microsoft Defender API配置
-TENANT_ID=your_tenant_id
-APP_ID=your_app_id
-APP_SECRET=your_app_secret
-REGION_ENDPOINT=api.securitycenter.microsoft.com
-APP_DOMAIN=traefik.test
-
-# MySQL数据库配置
-DB_HOST=localhost
-DB_PORT=6678
-DB_NAME=your_database_name
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-
+TENANT_ID=xxx
+APP_ID=xxx
+APP_SECRET=xxx
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=vulndb
+DB_USER=vuln_app
+DB_PASSWORD=vuln_app_password
+MYSQL_ROOT_PASSWORD=change-this-root-password
+SECRET_KEY=change-this-secret
+INTEGRATIONS_SECRET_KEY=base64-url-safe-32-byte-key
 ```
+> `.env` 会被 `config.py` 自动读取，`initialize_app_database()` 会在后端启动时建表/迁移。
 
-> **提示**：若在本地用 Traefik 转发，可在 `/etc/hosts`（或 Windows `hosts` 文件）中添加 `127.0.0.1 traefik.test`，将其替换为自己设置的 `APP_DOMAIN`。
-
-### 3. 初始化数据库
-
-运行 `defender.py` 来同步漏洞数据到MySQL：
-
+### 4. 安装并运行 Flask 后端
 ```bash
-python3 defender.py
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py  # 前台验证
+nohup python app.py > backend.log 2>&1 &  # 后台常驻
 ```
+- API 地址：`http://127.0.0.1:5001/api/...`
+- 使用 `tail -f backend.log` 或 `lsof -i :5001` 检查运行情况。
 
-这将：
-- 创建必要的数据库表
-- 从Microsoft Defender API获取漏洞数据（包括设备漏洞详情和漏洞列表）
-- 将数据存储到MySQL数据库
-
-**注意**：系统现在使用两个Microsoft Defender API：
-1. `/api/machines/SoftwareVulnerabilitiesByMachine` - 获取设备级别的漏洞详情（支持增量同步）
-2. `/api/vulnerabilities` - 获取漏洞列表本身的信息（仅全量同步，需要身份认证）
-
-两个API都需要Bearer token身份认证。
-
-### 4. 构建前端（生产环境）
-
+### 5. 构建 React 前端
 ```bash
 cd frontend
-npm install
+npm install  # 首次
 npm run build
-cd ..
 ```
+- 构建产物位于 `frontend/dist`，Flask 会自动作为静态目录。
+- 若想由 Nginx 直接托管，可 `rsync -av frontend/dist/ /var/www/vuln-frontend/`。
 
-### 5. 启动Web服务器
+### 6. 配置 Nginx（统一 80 端口）
+```
+server {
+    listen 80;
+    server_name your_domain.com;
 
+    root /var/www/vuln-frontend;  # 或项目内 frontend/dist 的绝对路径
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+- `sudo nginx -t && sudo systemctl reload nginx`
+- 用 `curl http://your_domain/api/vulnerabilities` 验证代理是否透传。
+
+### 7. 同步 Microsoft Defender 数据（可选）
 ```bash
-python3 app.py
+source .venv/bin/activate
+python defender.py
 ```
-
-服务器将在 `http://localhost:5001` 启动。
-
-**开发模式：**
-如果需要开发前端，可以同时运行：
-- Flask后端：`python3 app.py` (端口5001)
-- React开发服务器：`cd frontend && npm run dev` (端口3000)
+- 可以将 `python defender.py` 写入 `cron`（如 `0 */6 * * * /opt/vuln/.venv/bin/python /opt/vuln/defender.py`）保持数据库最新。
 
 ## 使用说明
 
@@ -145,19 +163,6 @@ python3 defender.py
    - 右侧聊天框可以与AI助手交互
    - 可以询问关于漏洞数据的问题
    - AI功能可以集成OpenAI或其他AI服务
-
-## Docker 迁移与部署
-
-在本地开发完成后，可以通过 Docker/Compose 将代码和数据迁移到 Ubuntu 虚拟机：
-
-1. **构建镜像**：确保 `.env` 已配置完毕，然后在本机执行 `docker compose build`. 该流程会先构建 React 前端，再构建 Python 应用。
-2. **数据库导出**：本机数据库使用 `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` 导出。
-3. **推送代码**：将最新代码（不包含 `.env`、`dump.sql`）推送到 GitHub 仓库，供内网 VM 通过 `git pull` 更新。
-4. **服务器准备**：在 Ubuntu VM（已具公网 IP/域名）安装 Docker Engine + Docker Compose Plugin，复制 `.env.prod` 到仓库根目录，并将 `dump.sql` 通过 SSH/离线介质传过去。
-5. **启动服务**：在 VM 或本地目录执行 `docker compose --env-file .env.prod up -d --build`，Traefik 会监听 80 端口并将 `http://APP_DOMAIN/` 的请求转发到 Flask（容器内部 5001 端口）。如需在本地测试，可将 `APP_DOMAIN` 设为 `traefik.test` 并在 `hosts` 文件中指向 `127.0.0.1`。随后通过 `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql` 导入数据。
-6. **数据同步**：如需立即从 Microsoft Defender 拉取最新数据，使用 `docker compose --env-file .env.prod run --rm app python defender.py`。建议将该命令写入宿主机 `cron`，例如 `0 */6 * * * cd /opt/vuln && docker compose --env-file .env.prod run --rm app python defender.py`。
-
-> **安全提示**：推送代码前执行 `git rm --cached .env` 并重新提交，避免将真实凭据暴露在远程仓库；随后在 Azure AD / 数据库中旋转泄露过的密钥。
 
 ## API接口
 

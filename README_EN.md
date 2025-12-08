@@ -26,80 +26,104 @@ VulnManagement/
 └── README.md             # Documentation (Chinese)
 ```
 
-## Installation
+## Installation (Step by Step)
 
-### 1. Install Python dependencies
-
+### 1. Run MySQL 8.0 with Docker
 ```bash
-pip install -r requirements.txt
+docker run -d \
+  --name mysql-db \
+  -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=change-this-root-password \
+  -e MYSQL_DATABASE=vulndb \
+  -e MYSQL_USER=vuln_app \
+  -e MYSQL_PASSWORD=vuln_app_password \
+  mysql:8.0 \
+  --character-set-server=utf8mb4 \
+  --collation-server=utf8mb4_unicode_ci
 ```
+- Keep `MYSQL_DATABASE/USER/PASSWORD` in sync with `.env`.
+- Validate with `mysql -h127.0.0.1 -P3306 -uroot -p` and `docker logs mysql-db`.
 
-### 2. Configure environment variables
-
-Copy `.env.example` to `.env` (local) or `.env.prod` (server) and fill in real secrets. Generate a new `INTEGRATIONS_SECRET_KEY` with:
-
+### 2. Import the legacy dump (`dump.sql`)
 ```bash
-python - <<'PY'
-import os, base64
-print(base64.urlsafe_b64encode(os.urandom(32)).decode())
-PY
+# Upload the dump (example)
+scp dump.sql user@server:/opt/vuln/dump.sql
+
+# Pipe it into the container
+cat /opt/vuln/dump.sql | docker exec -i mysql-db \
+  mysql -uroot -p"$MYSQL_ROOT_PASSWORD" vulndb
 ```
+- When the dump already contains `CREATE DATABASE`, recreate the schema first: `docker exec -it mysql-db mysql -uroot -p -e "DROP DATABASE IF EXISTS vulndb; CREATE DATABASE vulndb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"`.
+- Verify the import with `mysql -h127.0.0.1 -P3306 -uvuln_app -p vulndb -e "SHOW TABLES;"`.
 
-Minimum variables required:
-
+### 3. Configure environment variables
+- Local: `cp .env.example .env`
+- Server: `cp .env.example .env.prod`
+- Minimum keys:
 ```env
-# Microsoft Defender API
-TENANT_ID=your_tenant_id
-APP_ID=your_app_id
-APP_SECRET=your_app_secret
-REGION_ENDPOINT=api.securitycenter.microsoft.com
-APP_DOMAIN=traefik.test
-
-# MySQL
-DB_HOST=localhost
-DB_PORT=6678
-DB_NAME=your_database
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
+TENANT_ID=your-tenant-id
+APP_ID=your-app-id
+APP_SECRET=your-app-secret
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=vulndb
+DB_USER=vuln_app
+DB_PASSWORD=vuln_app_password
+MYSQL_ROOT_PASSWORD=change-this-root-password
+SECRET_KEY=change-this-secret
+INTEGRATIONS_SECRET_KEY=base64-url-safe-32-byte-key
 ```
+> `config.py` loads these automatically and `initialize_app_database()` runs migrations on startup.
 
-> Tip: for local Traefik testing, add `127.0.0.1 traefik.test` (or your own `APP_DOMAIN`) to `/etc/hosts` or `C:\\Windows\\System32\\drivers\\etc\\hosts`.
-
-### 3. Initialize the database
-
+### 4. Prepare and run the Flask backend
 ```bash
-python3 defender.py
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py  # foreground test
+nohup python app.py > backend.log 2>&1 &  # keep running
 ```
+- API base URL: `http://127.0.0.1:5001/api/...`
+- Inspect `tail -f backend.log` or `lsof -i :5001` for health checks.
 
-This will:
-- Create the required tables.
-- Download machine-level vulnerabilities and the vulnerability catalog from Microsoft Defender.
-- Persist everything into MySQL.
-
-APIs in use:
-1. `/api/machines/SoftwareVulnerabilitiesByMachine` – incremental device-level sync.
-2. `/api/vulnerabilities` – catalog-only, full sync (requires authentication).
-
-### 4. Build the frontend (production)
-
+### 5. Build the React frontend
 ```bash
 cd frontend
-npm install
+npm install  # first time
 npm run build
-cd ..
 ```
+- Output lives in `frontend/dist`; Flask serves it automatically.
+- Or sync to `/var/www/vuln-frontend/` for Nginx-only hosting.
 
-### 5. Run the Flask server
+### 6. Configure Nginx (port 80 entry point)
+```
+server {
+    listen 80;
+    server_name your_domain.com;
 
+    root /var/www/vuln-frontend;  # or the repo's frontend/dist path
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+- `sudo nginx -t && sudo systemctl reload nginx`
+- Validate with `curl http://your_domain/api/vulnerabilities`.
+
+### 7. (Optional) Sync Microsoft Defender data
 ```bash
-python3 app.py
+source .venv/bin/activate
+python defender.py
 ```
-
-The backend serves traffic on `http://localhost:5001`.
-
-**Dev mode tips**
-- `python3 app.py` for the backend (port 5001)
-- `cd frontend && npm run dev` for the Vite dev server (port 3000)
+- Add `python defender.py` to cron (e.g., `0 */6 * * * /opt/vuln/.venv/bin/python /opt/vuln/defender.py`).
 
 ## Usage Guide
 
@@ -123,19 +147,6 @@ The job automatically:
 2. **Filtering** – CVE, device, severity, status, CVSS range, exploitability, OS platform, etc.
 3. **Charts** – auto-refreshing distributions by severity, status, platform, vendor, exploitability.
 4. **AI assistant** – chat column on the right for natural language questions about your dataset.
-
-## Docker Migration & Deployment
-
-Use Docker + Compose to ship code and data to an Ubuntu VM.
-
-1. **Build images** – ensure `.env` is ready, then run `docker compose build`. The multi-stage Dockerfile builds React first, then bundles the Flask app.
-2. **Export database** – `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` (adjust host/port/user as needed).
-3. **Push code** – commit and push everything except secrets / dumps to GitHub. The VM will `git pull` from there.
-4. **Prepare the server** – install Docker Engine + Compose, copy `.env.prod` to the repo root, and transfer `dump.sql` (via SCP, offline media, etc.).
-5. **Start services** – run `docker compose --env-file .env.prod up -d --build`. Traefik (HTTP only) listens on port 80 and routes `http://APP_DOMAIN/` to the Flask container (port 5001). For local testing, set `APP_DOMAIN=traefik.test` and point it to `127.0.0.1` via hosts. Then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`.
-6. **Sync data** – to pull fresh data immediately: `docker compose --env-file .env.prod run --rm app python defender.py`. Add the same command to cron: `0 */6 * * * cd /opt/vuln && docker compose --env-file .env.prod run --rm app python defender.py`.
-
-> **Security** – run `git rm --cached .env` before pushing. After accidental exposure, rotate Azure AD secrets and database passwords immediately.
 
 ## API Reference
 
