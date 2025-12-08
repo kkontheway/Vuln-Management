@@ -51,14 +51,17 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.vuln.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.vuln.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/vulnmanagement`)"
       - "traefik.http.routers.vuln.entrypoints=websecure"
       - "traefik.http.routers.vuln.tls=true"
       - "traefik.http.routers.vuln.tls.certresolver=myresolver"
       - "traefik.http.services.vuln.loadbalancer.server.port=5001"
-      - "traefik.http.routers.vuln-http.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.middlewares.vuln-strip.stripprefix.prefixes=/vulnmanagement"
+      - "traefik.http.middlewares.vuln-strip.stripprefix.forceSlash=true"
+      - "traefik.http.routers.vuln.middlewares=vuln-strip@docker"
+      - "traefik.http.routers.vuln-http.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/vulnmanagement`)"
       - "traefik.http.routers.vuln-http.entrypoints=web"
-      - "traefik.http.routers.vuln-http.middlewares=redirect-to-https@docker"
+      - "traefik.http.routers.vuln-http.middlewares=vuln-strip@docker,redirect-to-https@docker"
     networks:
       - app-network
 

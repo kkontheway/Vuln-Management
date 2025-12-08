@@ -133,7 +133,7 @@ Use Docker + Compose to ship code and data to an Ubuntu VM.
 2. **Export database** – `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` (adjust host/port/user as needed).
 3. **Push code** – commit and push everything except secrets / dumps to GitHub. The VM will `git pull` from there.
 4. **Prepare the server** – install Docker Engine + Compose, copy `.env.prod` to the repo root, and transfer `dump.sql` (via SCP, offline media, etc.).
-5. **Start services** – run `docker compose --env-file .env.prod up -d --build`. Traefik will request certificates for `APP_DOMAIN` (e.g., `ati.victrex.link`) and proxy traffic to Flask. Then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`.
+5. **Start services** – run `docker compose --env-file .env.prod up -d --build`. Traefik will request certificates for `APP_DOMAIN` (e.g., `ati.victrex.link`) and route requests hitting `https://APP_DOMAIN/vulnmanagement` to the Flask app. Then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`.
 6. **Sync data** – to pull fresh data immediately: `docker compose --env-file .env.prod run --rm app python defender.py`. Add the same command to cron: `0 */6 * * * cd /opt/vuln && docker compose --env-file .env.prod run --rm app python defender.py`.
 
 > **Security** – run `git rm --cached .env` before pushing. After accidental exposure, rotate Azure AD secrets and database passwords immediately.

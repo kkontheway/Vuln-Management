@@ -154,7 +154,7 @@ python3 defender.py
 2. **数据库导出**：本机数据库使用 `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` 导出。
 3. **推送代码**：将最新代码（不包含 `.env`、`dump.sql`）推送到 GitHub 仓库，供内网 VM 通过 `git pull` 更新。
 4. **服务器准备**：在 Ubuntu VM（已具公网 IP/域名）安装 Docker Engine + Docker Compose Plugin，复制 `.env.prod` 到仓库根目录，并将 `dump.sql` 通过 SSH/离线介质传过去。
-5. **启动服务**：在 VM 仓库目录执行 `docker compose --env-file .env.prod up -d --build`，Traefik 会自动为 `APP_DOMAIN`（如 `ati.victrex.link`）申请证书并转发到 Flask 应用。再通过 `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql` 导入数据。
+5. **启动服务**：在 VM 仓库目录执行 `docker compose --env-file .env.prod up -d --build`，Traefik 会自动为 `APP_DOMAIN`（如 `ati.victrex.link`）申请证书并将 `https://APP_DOMAIN/vulnmanagement` 的请求转发到 Flask 应用。再通过 `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql` 导入数据。
 6. **数据同步**：如需立即从 Microsoft Defender 拉取最新数据，使用 `docker compose --env-file .env.prod run --rm app python defender.py`。建议将该命令写入宿主机 `cron`，例如 `0 */6 * * * cd /opt/vuln && docker compose --env-file .env.prod run --rm app python defender.py`。
 
 > **安全提示**：推送代码前执行 `git rm --cached .env` 并重新提交，避免将真实凭据暴露在远程仓库；随后在 Azure AD / 数据库中旋转泄露过的密钥。
