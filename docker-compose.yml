@@ -1,4 +1,20 @@
 services:
+  traefik:
+    image: traefik:v3.4
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:8081"
+    ports:
+      - "8081:8081"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-network
+
   app:
     build:
       context: .
@@ -15,6 +31,11 @@ services:
         condition: service_healthy
     ports:
       - "5001:5001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vuln.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.vuln.entrypoints=web"
+      - "traefik.http.services.vuln.loadbalancer.server.port=5001"
     networks:
       - app-network
 
@@ -43,7 +64,6 @@ services:
 
 volumes:
   mysql_data:
-  acme_data:
 
 networks:
   app-network:

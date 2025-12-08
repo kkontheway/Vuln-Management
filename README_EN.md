@@ -53,18 +53,17 @@ TENANT_ID=your_tenant_id
 APP_ID=your_app_id
 APP_SECRET=your_app_secret
 REGION_ENDPOINT=api.securitycenter.microsoft.com
-APP_DOMAIN=your.domain.com
+APP_DOMAIN=traefik.test
 
 # MySQL
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=6678
 DB_NAME=your_database
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-
-# Traefik / certificates
-TRAEFIK_ACME_EMAIL=admin@example.com
 ```
+
+> Tip: for local Traefik testing, add `127.0.0.1 traefik.test` (or your own `APP_DOMAIN`) to `/etc/hosts` or `C:\\Windows\\System32\\drivers\\etc\\hosts`.
 
 ### 3. Initialize the database
 
@@ -133,7 +132,7 @@ Use Docker + Compose to ship code and data to an Ubuntu VM.
 2. **Export database** – `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` (adjust host/port/user as needed).
 3. **Push code** – commit and push everything except secrets / dumps to GitHub. The VM will `git pull` from there.
 4. **Prepare the server** – install Docker Engine + Compose, copy `.env.prod` to the repo root, and transfer `dump.sql` (via SCP, offline media, etc.).
-5. **Start services** – run `docker compose --env-file .env.prod up -d --build`. Traefik will request certificates for `APP_DOMAIN` (e.g., `ati.victrex.link`) and route requests hitting `https://APP_DOMAIN/vulnmanagement` to the Flask app. Then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`.
+5. **Start services** – run `docker compose --env-file .env.prod up -d --build`. Traefik (HTTP only) listens on port 80 and routes `http://APP_DOMAIN/` to the Flask container (port 5001). For local testing, set `APP_DOMAIN=traefik.test` and point it to `127.0.0.1` via hosts. Then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`.
 6. **Sync data** – to pull fresh data immediately: `docker compose --env-file .env.prod run --rm app python defender.py`. Add the same command to cron: `0 */6 * * * cd /opt/vuln && docker compose --env-file .env.prod run --rm app python defender.py`.
 
 > **Security** – run `git rm --cached .env` before pushing. After accidental exposure, rotate Azure AD secrets and database passwords immediately.

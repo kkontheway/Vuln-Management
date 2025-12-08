@@ -159,6 +159,10 @@ def _render_report_template(cve_id: str, summary: Dict) -> str:
     if not evidence_lines:
         evidence_lines.append("  - No specific evidence paths recorded.")
 
+    device_block = "\n".join(device_lines)
+    evidence_block = "\n".join(evidence_lines)
+    remediation_block = "\n".join(remediation_lines)
+
     template = dedent(f"""
         Vulnerability Recommendation Report - {cve_id}
 
@@ -178,15 +182,15 @@ def _render_report_template(cve_id: str, summary: Dict) -> str:
 
         Sample Affected Devices
         -----------------------
-        {'\n'.join(device_lines)}
+        {device_block}
 
         Evidence Highlights
         -------------------
-        {'\n'.join(evidence_lines)}
+        {evidence_block}
 
         Recommended Actions
         -------------------
-        {'\n'.join(remediation_lines)}
+        {remediation_block}
     """).strip()
 
     return template

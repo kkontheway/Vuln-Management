@@ -1,6 +1,6 @@
 """Static file serving routes."""
-from flask import Blueprint, send_from_directory, jsonify
-from config import config
+from flask import Blueprint, current_app, jsonify
+from werkzeug.exceptions import NotFound
 
 bp = Blueprint('static', __name__)
 
@@ -9,14 +9,14 @@ bp = Blueprint('static', __name__)
 @bp.route('/<path:path>')
 def serve_react_app(path):
     """Serve React application for all non-API routes."""
+    path = (path or '').lstrip('/')
     if path.startswith('api/'):
-        # This shouldn't happen as API routes are defined above, but just in case
         return jsonify({'error': 'Not found'}), 404
-    
-    # Try to serve static files first
-    try:
-        return send_from_directory(config.STATIC_FOLDER, path)
-    except:
-        # If file doesn't exist, serve index.html (for React Router)
-        return send_from_directory(config.STATIC_FOLDER, 'index.html')
 
+    if path:
+        try:
+            return current_app.send_static_file(path)
+        except NotFound:
+            pass
+
+    return current_app.send_static_file('index.html')
