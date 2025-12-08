@@ -53,6 +53,7 @@ TENANT_ID=your_tenant_id
 APP_ID=your_app_id
 APP_SECRET=your_app_secret
 REGION_ENDPOINT=api.securitycenter.microsoft.com
+APP_DOMAIN=your.domain.com
 
 # MySQL
 DB_HOST=localhost
@@ -60,6 +61,9 @@ DB_PORT=3306
 DB_NAME=your_database
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
+
+# Traefik / certificates
+TRAEFIK_ACME_EMAIL=admin@example.com
 ```
 
 ### 3. Initialize the database
@@ -129,8 +133,8 @@ Use Docker + Compose to ship code and data to an Ubuntu VM.
 2. **Export database** – `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` (adjust host/port/user as needed).
 3. **Push code** – commit and push everything except secrets / dumps to GitHub. The VM will `git pull` from there.
 4. **Prepare the server** – install Docker Engine + Compose, copy `.env.prod` to the repo root, and transfer `dump.sql` (via SCP, offline media, etc.).
-5. **Start services** – run `ENV_FILE=.env.prod docker compose up -d --build`, then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`. Publish port 5001 directly or via Nginx/Traefik with HTTPS.
-6. **Sync data** – to pull fresh data immediately: `ENV_FILE=.env.prod docker compose run --rm app python defender.py`. Add the same command to cron for recurring syncs: `0 */6 * * * cd /opt/vuln && ENV_FILE=.env.prod docker compose run --rm app python defender.py`.
+5. **Start services** – run `docker compose --env-file .env.prod up -d --build`. Traefik will request certificates for `APP_DOMAIN` (e.g., `ati.victrex.link`) and proxy traffic to Flask. Then import the data: `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql`.
+6. **Sync data** – to pull fresh data immediately: `docker compose --env-file .env.prod run --rm app python defender.py`. Add the same command to cron: `0 */6 * * * cd /opt/vuln && docker compose --env-file .env.prod run --rm app python defender.py`.
 
 > **Security** – run `git rm --cached .env` before pushing. After accidental exposure, rotate Azure AD secrets and database passwords immediately.
 
