@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-
+dump.sql
 # Python
 __pycache__/
 *.pyc
