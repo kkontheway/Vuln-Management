@@ -18,6 +18,7 @@ export interface Vulnerability {
   id: string | number;
   cve_id: string;
   severity?: string;
+  vulnerability_severity_level?: string;
   description?: string;
   cvss_score?: number;
   cve_epss?: number;
@@ -32,6 +33,11 @@ export interface Vulnerability {
   recordfuture_detected?: boolean;
   affected_devices?: number;
   last_seen_timestamp?: string;
+  security_update_available?: boolean;
+  recommended_security_update_id?: string;
+  recommended_security_update?: string;
+  recommended_security_update_url?: string;
+  recommendation_reference?: string;
 }
 
 export interface VulnerabilityDevice {
@@ -60,7 +66,7 @@ export interface VulnerabilityFilters {
   cvss_max?: string;
   epss_min?: string;
   epss_max?: string;
-  cve_public_exploit?: string | boolean;
+  cve_public_exploit?: string;
   threat_intel?: string | string[];
   date_from?: string;
   date_to?: string;
