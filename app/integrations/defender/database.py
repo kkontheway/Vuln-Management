@@ -8,6 +8,7 @@ from app.constants.database import (
     TABLE_SYNC_STATE,
     TABLE_VULNERABILITY_SNAPSHOTS,
     TABLE_CVE_DEVICE_SNAPSHOTS,
+    TABLE_VULNERABILITY_TREND_PERIODS,
     TABLE_RECOMMENDATION_REPORTS,
     TABLE_RAPID_VULNERABILITIES,
     TABLE_NUCLEI_VULNERABILITIES,
@@ -146,6 +147,28 @@ def migrate_database(connection):
                         logger.warning(f"Error adding autopatch_covered column: {e}")
                         connection.rollback()
 
+            # Ensure cve_description column exists for caching NVD text
+            try:
+                cursor.execute(f"SELECT cve_description FROM {TABLE_VULNERABILITIES} LIMIT 1")
+                cursor.fetchone()
+                logger.info("%s table already has cve_description column", TABLE_VULNERABILITIES)
+            except Error:
+                logger.info("Adding cve_description column to %s table...", TABLE_VULNERABILITIES)
+                try:
+                    cursor.execute(
+                        f"ALTER TABLE {TABLE_VULNERABILITIES} "
+                        f"ADD COLUMN cve_description TEXT AFTER recommendation_reference"
+                    )
+                    connection.commit()
+                    logger.info("Successfully added cve_description column")
+                except Error as e:
+                    error_msg = str(e).lower()
+                    if 'duplicate column' in error_msg or 'already exists' in error_msg:
+                        logger.info("cve_description column already exists, skipping")
+                    else:
+                        logger.warning("Error adding cve_description column: %s", e)
+                        connection.rollback()
+
             # Ensure threat source indicator columns exist
             threat_source_columns = [
                 ("metasploit_detected", "idx_metasploit_detected"),
@@ -259,6 +282,7 @@ def initialize_database(connection):
             recommended_security_update_id VARCHAR(100),
             recommended_security_update_url TEXT,
             recommendation_reference VARCHAR(255),
+            cve_description TEXT,
             autopatch_covered BOOLEAN DEFAULT FALSE,
             metasploit_detected BOOLEAN DEFAULT FALSE,
             nuclei_detected BOOLEAN DEFAULT FALSE,
@@ -335,6 +359,28 @@ def initialize_database(connection):
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """
+
+        # Create vulnerability trend periods table (materialized rollups)
+        vulnerability_trend_periods_table = f"""
+        CREATE TABLE IF NOT EXISTS {TABLE_VULNERABILITY_TREND_PERIODS} (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            period_type ENUM('week','month','year') NOT NULL,
+            period_label VARCHAR(32) NOT NULL,
+            period_start DATE NOT NULL,
+            period_end DATE NOT NULL,
+            critical_active INT DEFAULT 0,
+            high_active INT DEFAULT 0,
+            medium_active INT DEFAULT 0,
+            data_points JSON NOT NULL,
+            source_snapshot_ids JSON,
+            is_carry_forward BOOLEAN DEFAULT FALSE,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_period_type_start (period_type, period_start),
+            INDEX idx_period_type (period_type),
+            INDEX idx_period_range (period_start, period_end)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
         
         # Create recommendation reports table
         recommendation_reports_table = f"""
@@ -388,6 +434,7 @@ def initialize_database(connection):
         cursor.execute(sync_state_table)
         cursor.execute(vulnerability_snapshots_table)
         cursor.execute(cve_device_snapshots_table)
+        cursor.execute(vulnerability_trend_periods_table)
         cursor.execute(recommendation_reports_table)
         cursor.execute(rapid_vulnerabilities_table)
         cursor.execute(nuclei_vulnerabilities_table)

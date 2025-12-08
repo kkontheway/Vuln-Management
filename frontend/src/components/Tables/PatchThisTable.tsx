@@ -105,10 +105,26 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
     return <div className="flex gap-2 flex-wrap">{tags}</div>;
   };
 
+  const renderVendorBadge = (vendor?: string) => {
+    if (!vendor) {
+      return <span className="text-text-tertiary text-sm">-</span>;
+    }
+    return (
+      <span className="px-2 py-0.5 text-xs rounded-full bg-slate-500/10 text-slate-500 border border-slate-500/30">
+        {vendor}
+      </span>
+    );
+  };
+
   return (
     <Card className="glass-panel">
       <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-lg flex items-center gap-2">
+          {title}
+          <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary border border-primary/30">
+            {data.length}
+          </span>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
@@ -125,6 +141,7 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
                     <TableHead>Severity</TableHead>
                     <TableHead>EPSS</TableHead>
                     <TableHead>KEV</TableHead>
+                    <TableHead>Vendor</TableHead>
                     <TableHead>Signals</TableHead>
                     <TableHead>Reasons</TableHead>
                     <TableHead>Last Seen</TableHead>
@@ -140,6 +157,7 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
                       <TableCell>{renderSeverityBadge(item.severity)}</TableCell>
                       <TableCell>{typeof item.cve_epss === 'number' ? item.cve_epss.toFixed(3) : '-'}</TableCell>
                       <TableCell>{renderKevBadge(item.cve_public_exploit)}</TableCell>
+                      <TableCell>{renderVendorBadge(item.software_vendor)}</TableCell>
                       <TableCell>{renderThreatIntelBadges(item)}</TableCell>
                       <TableCell>{renderReasonTags(item)}</TableCell>
                       <TableCell>{formatDate(item.last_seen_timestamp)}</TableCell>

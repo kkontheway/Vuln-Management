@@ -36,7 +36,16 @@ pip install -r requirements.txt
 
 ### 2. 配置环境变量
 
-创建 `.env` 文件，配置以下变量：
+复制 `.env.example` 为 `.env`（本地开发）或 `.env.prod`（服务器），然后填入真实凭据。`INTEGRATIONS_SECRET_KEY` 可以使用 `python - <<'PY'` 生成随机密钥：
+
+```bash
+python - <<'PY'
+import os, base64
+print(base64.urlsafe_b64encode(os.urandom(32)).decode())
+PY
+```
+
+`.env` 中需要包含以下变量：
 
 ```env
 # Microsoft Defender API配置
@@ -132,6 +141,19 @@ python3 defender.py
    - 右侧聊天框可以与AI助手交互
    - 可以询问关于漏洞数据的问题
    - AI功能可以集成OpenAI或其他AI服务
+
+## Docker 迁移与部署
+
+在本地开发完成后，可以通过 Docker/Compose 将代码和数据迁移到 Ubuntu 虚拟机：
+
+1. **构建镜像**：确保 `.env` 已配置完毕，然后在本机执行 `docker compose build`. 该流程会先构建 React 前端，再构建 Python 应用。
+2. **数据库导出**：本机数据库使用 `mysqldump --single-transaction --routines --triggers -h 127.0.0.1 -P 3308 -u root -p vulndb > dump.sql` 导出。
+3. **推送代码**：将最新代码（不包含 `.env`、`dump.sql`）推送到 GitHub 仓库，供内网 VM 通过 `git pull` 更新。
+4. **服务器准备**：在 Ubuntu VM（已具公网 IP/域名）安装 Docker Engine + Docker Compose Plugin，复制 `.env.prod` 到仓库根目录，并将 `dump.sql` 通过 SSH/离线介质传过去。
+5. **启动服务**：在 VM 仓库目录执行 `ENV_FILE=.env.prod docker compose up -d --build`，然后通过 `docker compose exec db mysql -u root -p"$MYSQL_ROOT_PASSWORD" ${DB_NAME} < /backup/dump.sql` 导入数据。根据需要，可开放 `5001` 端口或通过 Nginx/Traefik 做反向代理与 HTTPS。
+6. **数据同步**：如需立即从 Microsoft Defender 拉取最新数据，使用 `ENV_FILE=.env.prod docker compose run --rm app python defender.py`。建议将该命令写入宿主机 `cron`，例如 `0 */6 * * * cd /opt/vuln && ENV_FILE=.env.prod docker compose run --rm app python defender.py`。
+
+> **安全提示**：推送代码前执行 `git rm --cached .env` 并重新提交，避免将真实凭据暴露在远程仓库；随后在 Azure AD / 数据库中旋转泄露过的密钥。
 
 ## API接口
 

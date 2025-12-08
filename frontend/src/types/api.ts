@@ -18,12 +18,14 @@ export interface Vulnerability {
   id: string | number;
   cve_id: string;
   severity?: string;
+  description?: string;
   cvss_score?: number;
   cve_epss?: number;
   cve_public_exploit?: boolean;
   status?: string;
   os_platform?: string;
   software_name?: string;
+  software_vendor?: string;
   exploitability_level?: string;
   metasploit_detected?: boolean;
   nuclei_detected?: boolean;
@@ -44,21 +46,24 @@ export interface VulnerabilityDevice {
 }
 
 export interface VulnerabilityFilters {
-  severity?: string;
-  platform?: string;
   cve_id?: string;
   device_name?: string;
+  os_platform?: string;
+  os_version?: string;
+  software_vendor?: string | string[];
+  software_name?: string;
+  vulnerability_severity_level?: string;
   status?: string;
-  exploitability?: string;
+  exploitability_level?: string;
+  rbac_group_name?: string;
   cvss_min?: string;
   cvss_max?: string;
   epss_min?: string;
   epss_max?: string;
-  os_platform?: string;
-  exploitability_level?: string;
-  software_vendor?: string | string[]; // Support both single value and array for multi-select
+  cve_public_exploit?: string | boolean;
   threat_intel?: string | string[];
-  cve_public_exploit?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 // Statistics
@@ -68,15 +73,28 @@ export interface StatisticsResponse {
   age_distribution?: AgeDistributionData;
   exploitability_ratio?: ChartData[];
   autopatch_coverage?: AutopatchCoverage;
+  autopatch_epss_coverage?: AutopatchEpssCoverage;
   new_vulnerabilities_7days?: number;
   epss_distribution?: ChartData[];
   intel_feed_overlap?: ChartData[];
 }
 
+export interface CoverageBreakdown {
+  covered: number;
+  not_covered: number;
+}
+
 export interface AutopatchCoverage {
-  critical: { covered: number; not_covered: number };
-  high: { covered: number; not_covered: number };
-  medium: { covered: number; not_covered: number };
+  critical: CoverageBreakdown;
+  high: CoverageBreakdown;
+  medium: CoverageBreakdown;
+}
+
+export interface AutopatchEpssCoverage {
+  low: CoverageBreakdown;
+  medium: CoverageBreakdown;
+  high: CoverageBreakdown;
+  critical: CoverageBreakdown;
 }
 
 export interface ChartData {
@@ -162,6 +180,22 @@ export interface SnapshotsTrendResponse {
   trend: SnapshotTrend[];
 }
 
+export type TrendPeriod = 'week' | 'month' | 'year';
+
+export interface TrendPoint {
+  date: string;
+  critical: number;
+  high: number;
+  medium: number;
+  carry?: boolean;
+}
+
+export type TrendSeries = Record<TrendPeriod, TrendPoint[]>;
+
+export interface DashboardTrendResponse {
+  periods: Partial<Record<TrendPeriod, TrendPoint[]>>;
+}
+
 // Chat
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -220,6 +254,7 @@ export interface PatchThisResponse {
 export interface VulnerabilityDetailEntry {
   cve_id: string;
   severity?: string;
+  description?: string;
   cvss_v3?: number;
   epss?: number;
   cve_public_exploit?: boolean;

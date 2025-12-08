@@ -79,8 +79,10 @@ def get_vulnerabilities():
 def get_patch_this():
     """Return high-priority vulnerabilities for PatchThis widget."""
     try:
-        limit = int(request.args.get('limit', 20))
-        data = vuln_service.get_patchthis_vulnerabilities(limit=limit)
+        limit_param = request.args.get('limit')
+        limit = int(limit_param) if limit_param not in (None, '', '0') else None
+        vendor_scope = request.args.get('vendor_scope')
+        data = vuln_service.get_patchthis_vulnerabilities(limit=limit, vendor_scope=vendor_scope)
         return jsonify({'data': data})
     except Exception as e:
         logger.error(f"获取PatchThis数据时出错: {e}")

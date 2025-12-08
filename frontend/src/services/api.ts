@@ -10,6 +10,7 @@ import type {
   Snapshot,
   SnapshotDetails,
   SnapshotsTrendResponse,
+  DashboardTrendResponse,
   ChatRequest,
   ChatResponse,
   FixedVulnerability,
@@ -17,6 +18,8 @@ import type {
   SyncSourceDefinition,
   SyncProgressSource,
   PatchThisResponse,
+  TrendSeries,
+  TrendPeriod,
 } from '@/types/api';
 import type {
   ServiceNowTicketCreate,
@@ -143,8 +146,15 @@ export const apiService = {
     return response.data;
   },
 
-  getPatchThisVulnerabilities: async (limit: number = 20): Promise<PatchThisResponse> => {
-    const response = await api.get<PatchThisResponse>('/patch-this', { params: { limit } });
+  getPatchThisVulnerabilities: async (options?: { limit?: number; vendorScope?: string }): Promise<PatchThisResponse> => {
+    const params: Record<string, string | number> = {};
+    if (options?.limit !== undefined) {
+      params.limit = options.limit;
+    }
+    if (options?.vendorScope) {
+      params.vendor_scope = options.vendorScope;
+    }
+    const response = await api.get<PatchThisResponse>('/patch-this', { params: Object.keys(params).length ? params : undefined });
     return response.data;
   },
 
@@ -193,6 +203,17 @@ export const apiService = {
   getSnapshotsTrend: async (): Promise<SnapshotsTrendResponse> => {
     const response = await api.get<SnapshotsTrendResponse>('/snapshots/trend');
     return response.data;
+  },
+
+  getDashboardTrends: async (period?: TrendPeriod): Promise<TrendSeries> => {
+    const params = period ? { period } : undefined;
+    const response = await api.get<DashboardTrendResponse>('/dashboard/trends', { params });
+    const payload = response.data?.periods ?? {};
+    return {
+      week: payload.week ?? [],
+      month: payload.month ?? [],
+      year: payload.year ?? [],
+    } satisfies TrendSeries;
   },
 
   getCveHistory: async (cveId: string): Promise<Record<string, unknown>> => {

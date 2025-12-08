@@ -3,6 +3,7 @@ from flask import Flask
 from app.routes import (
     vulnerabilities,
     snapshots,
+    dashboard_trends,
     sync,
     servicenow,
     threat_intelligence,
@@ -24,6 +25,7 @@ def register_blueprints(app: Flask):
     # API routes
     app.register_blueprint(vulnerabilities.bp)
     app.register_blueprint(snapshots.bp)
+    app.register_blueprint(dashboard_trends.bp)
     app.register_blueprint(sync.bp)
     app.register_blueprint(servicenow.bp)
     app.register_blueprint(threat_intelligence.bp)

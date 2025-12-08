@@ -1,15 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import Header from '../components/Header/Header';
 import PieChart from '../components/Charts/PieChart';
-import LineChart from '../components/Charts/LineChart';
 import BarChart from '../components/Charts/BarChart';
+import SeverityTrendTabs from '../components/Charts/SeverityTrendTabs';
 import VulnerabilityTrendCard from '../components/Cards/VulnerabilityTrendCard';
 import FixedVulnerabilitiesTable from '../components/Tables/FixedVulnerabilitiesTable';
 import PatchThisTable from '../components/Tables/PatchThisTable';
 import EpssAnalyticsSection from '../components/Cards/EpssAnalyticsSection';
 import IntelligenceFeedOverlapChart from '../components/Charts/IntelligenceFeedOverlapChart';
 import apiService from '../services/api';
-import type { ChartData, SnapshotsTrendResponse, AgeDistributionData, AutopatchCoverage, FixedVulnerability, Vulnerability } from '@/types/api';
+import type {
+  ChartData,
+  SnapshotsTrendResponse,
+  AgeDistributionData,
+  AutopatchCoverage,
+  AutopatchEpssCoverage,
+  FixedVulnerability,
+  Vulnerability,
+  TrendSeries,
+} from '@/types/api';
 
 const Dashboard = () => {
   const [statistics, setStatistics] = useState<{
@@ -17,6 +26,7 @@ const Dashboard = () => {
     age_distribution: AgeDistributionData;
     exploitability_ratio: ChartData[];
     autopatch_coverage?: AutopatchCoverage;
+    autopatch_epss_coverage?: AutopatchEpssCoverage;
     new_vulnerabilities_7days?: number;
     epss_distribution: ChartData[];
     intel_feed_overlap: ChartData[];
@@ -25,21 +35,33 @@ const Dashboard = () => {
     age_distribution: {},
     exploitability_ratio: [],
     autopatch_coverage: undefined,
+    autopatch_epss_coverage: undefined,
     new_vulnerabilities_7days: 0,
     epss_distribution: [],
     intel_feed_overlap: [],
   });
   const [trendData, setTrendData] = useState<SnapshotsTrendResponse['trend']>([]);
+  const [trendPeriods, setTrendPeriods] = useState<TrendSeries>({ week: [], month: [], year: [] });
   const [fixedVulnerabilities, setFixedVulnerabilities] = useState<FixedVulnerability[]>([]);
-  const [patchThisData, setPatchThisData] = useState<Vulnerability[]>([]);
+  const [patchThisThirdParty, setPatchThisThirdParty] = useState<Vulnerability[]>([]);
+  const [patchThisMicrosoft, setPatchThisMicrosoft] = useState<Vulnerability[]>([]);
 
   const loadData = useCallback(async () => {
     try {
-      const [statsResponse, trendResponse, fixedResponse, patchResponse] = await Promise.all([
+      const [
+        statsResponse,
+        trendResponse,
+        fixedResponse,
+        patchThirdResponse,
+        patchMsResponse,
+        dashboardTrendsResponse,
+      ] = await Promise.all([
         apiService.getStatistics(),
         apiService.getSnapshotsTrend(),
         apiService.getFixedVulnerabilities(50),
-        apiService.getPatchThisVulnerabilities(20),
+        apiService.getPatchThisVulnerabilities({ vendorScope: 'third_party' }),
+        apiService.getPatchThisVulnerabilities({ vendorScope: 'microsoft' }),
+        apiService.getDashboardTrends(),
       ]);
 
       setStatistics({
@@ -47,13 +69,16 @@ const Dashboard = () => {
         age_distribution: statsResponse.age_distribution || {},
         exploitability_ratio: statsResponse.exploitability_ratio || [],
         autopatch_coverage: statsResponse.autopatch_coverage,
+        autopatch_epss_coverage: statsResponse.autopatch_epss_coverage,
         new_vulnerabilities_7days: statsResponse.new_vulnerabilities_7days || 0,
         epss_distribution: statsResponse.epss_distribution || [],
         intel_feed_overlap: statsResponse.intel_feed_overlap || [],
       });
       setTrendData(trendResponse.trend || []);
+      setTrendPeriods(dashboardTrendsResponse);
       setFixedVulnerabilities(fixedResponse.data || []);
-      setPatchThisData(patchResponse.data || []);
+      setPatchThisThirdParty(patchThirdResponse.data || []);
+      setPatchThisMicrosoft(patchMsResponse.data || []);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     }
@@ -93,11 +118,15 @@ const Dashboard = () => {
           />
         </div>
 
-        <PatchThisTable data={patchThisData} />
+        <PatchThisTable data={patchThisThirdParty} title="PatchThis (3rd Party)" />
+        <PatchThisTable data={patchThisMicrosoft} title="PatchThis (MS)" />
 
         <FixedVulnerabilitiesTable data={fixedVulnerabilities} limit={10} />
 
-        <EpssAnalyticsSection data={statistics.epss_distribution} />
+        <EpssAnalyticsSection
+          data={statistics.epss_distribution}
+          autopatchCoverage={statistics.autopatch_epss_coverage}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <PieChart
@@ -114,7 +143,7 @@ const Dashboard = () => {
           />
         </div>
 
-        <LineChart data={trendData} title="Severity Trend" />
+        <SeverityTrendTabs data={trendPeriods} />
         <BarChart data={statistics.age_distribution} title="Vulnerability Age Distribution" />
         <PieChart data={statistics.exploitability_ratio} title="Exploitable vs Theoretical Risk" />
         <IntelligenceFeedOverlapChart data={statistics.intel_feed_overlap} />

@@ -11,6 +11,7 @@ from app.services.sync_sources import (
     get_sync_source_map,
     get_sync_sources,
 )
+from app.services import trend_service
 from app.services.sync_sources.base import SyncSource, SyncSourceResult
 
 logger = logging.getLogger(__name__)
@@ -268,6 +269,16 @@ def _run_sync_job(selected_sources: List[SyncSource]):
                 _set_progress('error', start_progress, f'{source.name} failed: {exc}', is_complete=True, is_syncing=False)
                 return
 
+        _refresh_dashboard_trends()
         _set_progress('complete', 100, 'Sync completed successfully', is_complete=True, is_syncing=False)
     finally:
         sync_in_progress = False
+
+
+def _refresh_dashboard_trends():
+    """Refresh dashboard trend materialization after successful sync."""
+    try:
+        updated = trend_service.refresh_trend_periods()
+        logger.info("Dashboard trend periods refreshed (updated=%s)", updated)
+    except Exception as exc:  # pragma: no cover - defensive logging only
+        logger.warning("Failed to refresh dashboard trends post-sync: %s", exc)

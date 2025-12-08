@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
+import type { VulnerabilityFilters } from '@/types/api';
 import apiService from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,29 +14,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { VulnerabilityFilters } from '@/types/api';
+import { createDefaultFilterState, serializeFilters, type FilterState, type EpssBucket } from '@/config/filterSchema';
 
 interface FilterPanelProps {
   onFilterChange: (filters: VulnerabilityFilters) => void;
 }
 
-type EpssBucket = 'all' | 'low' | 'medium' | 'high' | 'critical';
-
 const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
-  const [filters, setFilters] = useState<VulnerabilityFilters>({
-    cve_id: '',
-    device_name: '',
-    severity: '',
-    status: '',
-    platform: '',
-    exploitability: '',
-    cvss_min: '',
-    cvss_max: '',
-    epss_min: '',
-    epss_max: '',
-    cve_public_exploit: '',
-    threat_intel: [],
-  });
+  const [filters, setFilters] = useState<FilterState>(() => createDefaultFilterState());
   const [filterOptions, setFilterOptions] = useState<{
     severities: string[];
     platforms: string[];
@@ -55,19 +41,11 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
   const vendorDropdownRef = useRef<HTMLDivElement>(null);
   const [threatIntelDropdownOpen, setThreatIntelDropdownOpen] = useState(false);
   const threatIntelDropdownRef = useRef<HTMLDivElement>(null);
-  const [epssBucket, setEpssBucket] = useState<EpssBucket>('all');
   const threatIntelOptions = [
     { label: 'Metasploit', value: 'metasploit' },
     { label: 'Nuclei', value: 'nuclei' },
     { label: 'RecordFuture', value: 'recordfuture' },
   ];
-  const epssRangeMap: Record<Exclude<EpssBucket, 'all'>, { min: string; max: string }> = {
-    low: { min: '0', max: '0.5' },
-    medium: { min: '0.5', max: '0.8' },
-    high: { min: '0.8', max: '0.9' },
-    critical: { min: '0.9', max: '' },
-  };
-
   useEffect(() => {
     void loadFilterOptions();
   }, []);
@@ -97,97 +75,47 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     }
   };
 
-  const handleFilterChange = (field: keyof VulnerabilityFilters, value: string | string[]) => {
-    const newFilters = { ...filters, [field]: value };
-    setFilters(newFilters);
+  const handleFilterChange = <K extends keyof FilterState>(field: K, value: FilterState[K]) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleVendorToggle = (vendor: string) => {
-    const currentVendors = Array.isArray(filters.software_vendor)
-      ? filters.software_vendor
-      : filters.software_vendor ? [filters.software_vendor] : [];
-
-    const isSelected = currentVendors.includes(vendor);
+    const isSelected = filters.vendors.includes(vendor);
     const newVendors = isSelected
-      ? currentVendors.filter(v => v !== vendor)
-      : [...currentVendors, vendor];
+      ? filters.vendors.filter(v => v !== vendor)
+      : [...filters.vendors, vendor];
 
-    handleFilterChange('software_vendor', newVendors.length > 0 ? newVendors : '');
+    handleFilterChange('vendors', newVendors);
   };
 
   const getSelectedVendors = (): string[] => {
-    if (Array.isArray(filters.software_vendor)) {
-      return filters.software_vendor;
-    }
-    return filters.software_vendor ? [filters.software_vendor] : [];
+    return filters.vendors;
   };
 
   const handleThreatIntelToggle = (value: string) => {
-    const currentSources = getSelectedThreatIntel();
-    const isSelected = currentSources.includes(value);
+    const isSelected = filters.threatIntel.includes(value);
     const newSources = isSelected
-      ? currentSources.filter((item) => item !== value)
-      : [...currentSources, value];
-    handleFilterChange('threat_intel', newSources.length > 0 ? newSources : '');
+      ? filters.threatIntel.filter((item) => item !== value)
+      : [...filters.threatIntel, value];
+    handleFilterChange('threatIntel', newSources);
   };
 
   const getSelectedThreatIntel = (): string[] => {
-    if (Array.isArray(filters.threat_intel)) {
-      return filters.threat_intel;
-    }
-    return filters.threat_intel ? [filters.threat_intel] : [];
+    return filters.threatIntel;
   };
 
   const handleEpssBucketChange = (bucket: EpssBucket) => {
-    setEpssBucket(bucket);
-    if (bucket === 'all') {
-      handleFilterChange('epss_min', '');
-      handleFilterChange('epss_max', '');
-      return;
-    }
-    const range = epssRangeMap[bucket];
-    handleFilterChange('epss_min', range.min);
-    handleFilterChange('epss_max', range.max);
+    handleFilterChange('epssBucket', bucket);
   };
 
   const applyFilters = () => {
-    // Convert 'all' values back to empty strings for API
-    const apiFilters: VulnerabilityFilters = {
-      ...filters,
-      severity: filters.severity === 'all' ? '' : filters.severity,
-      status: filters.status === 'all' ? '' : filters.status,
-      platform: filters.platform === 'all' ? '' : filters.platform,
-      cve_public_exploit: filters.cve_public_exploit === 'all' ? '' : filters.cve_public_exploit,
-      // Keep software_vendor as array if it's an array, or convert to empty string if empty
-      software_vendor: Array.isArray(filters.software_vendor) && filters.software_vendor.length > 0
-        ? filters.software_vendor
-        : filters.software_vendor || '',
-      threat_intel: Array.isArray(filters.threat_intel) && filters.threat_intel.length > 0
-        ? filters.threat_intel
-        : filters.threat_intel || '',
-    };
-    onFilterChange(apiFilters);
+    onFilterChange(serializeFilters(filters));
   };
 
   const clearFilters = () => {
-    const clearedFilters: VulnerabilityFilters = {
-      cve_id: '',
-      device_name: '',
-      severity: '',
-      status: '',
-      platform: '',
-      exploitability: '',
-      cvss_min: '',
-      cvss_max: '',
-      epss_min: '',
-      epss_max: '',
-      cve_public_exploit: '',
-      software_vendor: '',
-      threat_intel: [],
-    };
+    const clearedFilters = createDefaultFilterState();
     setFilters(clearedFilters);
-    setEpssBucket('all');
-    onFilterChange(clearedFilters);
+    onFilterChange(serializeFilters(clearedFilters));
   };
 
   // Close dropdowns when clicking outside
@@ -228,8 +156,8 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
             <label className="text-xs font-medium text-text-secondary">CVE ID</label>
             <Input
               type="text"
-              value={filters.cve_id || ''}
-              onChange={(e) => handleFilterChange('cve_id', e.target.value)}
+              value={filters.cveId}
+              onChange={(e) => handleFilterChange('cveId', e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Search CVE ID"
               className="h-8 text-xs"
@@ -239,8 +167,8 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
             <label className="text-xs font-medium text-text-secondary">Device Name</label>
             <Input
               type="text"
-              value={filters.device_name || ''}
-              onChange={(e) => handleFilterChange('device_name', e.target.value)}
+              value={filters.deviceName}
+              onChange={(e) => handleFilterChange('deviceName', e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Search device name"
               className="h-8 text-xs"
@@ -249,7 +177,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-secondary">Severity</label>
             <Select
-              value={filters.severity || 'all'}
+              value={filters.severity}
               onValueChange={(value) => handleFilterChange('severity', value)}
             >
               <SelectTrigger className="h-8 text-xs">
@@ -268,7 +196,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-secondary">Status</label>
             <Select
-              value={filters.status || 'all'}
+              value={filters.status}
               onValueChange={(value) => handleFilterChange('status', value)}
             >
               <SelectTrigger className="h-8 text-xs">
@@ -287,7 +215,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-secondary">OS Platform</label>
             <Select
-              value={filters.platform || 'all'}
+              value={filters.platform}
               onValueChange={(value) => handleFilterChange('platform', value)}
             >
               <SelectTrigger className="h-8 text-xs">
@@ -307,8 +235,8 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
             <label className="text-xs font-medium text-text-secondary">CVSS Min Score</label>
             <Input
               type="number"
-              value={filters.cvss_min || ''}
-              onChange={(e) => handleFilterChange('cvss_min', e.target.value)}
+              value={filters.cvssMin}
+              onChange={(e) => handleFilterChange('cvssMin', e.target.value)}
               min="0"
               max="10"
               step="0.1"
@@ -320,8 +248,8 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
             <label className="text-xs font-medium text-text-secondary">CVSS Max Score</label>
             <Input
               type="number"
-              value={filters.cvss_max || ''}
-              onChange={(e) => handleFilterChange('cvss_max', e.target.value)}
+              value={filters.cvssMax}
+              onChange={(e) => handleFilterChange('cvssMax', e.target.value)}
               min="0"
               max="10"
               step="0.1"
@@ -332,7 +260,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-secondary">EPSS Score</label>
             <Select
-              value={epssBucket}
+              value={filters.epssBucket}
               onValueChange={(value) => handleEpssBucketChange(value as EpssBucket)}
             >
               <SelectTrigger className="h-8 text-xs">
@@ -350,8 +278,8 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-secondary">KEV</label>
             <Select
-              value={filters.cve_public_exploit || 'all'}
-              onValueChange={(value) => handleFilterChange('cve_public_exploit', value)}
+              value={filters.kev}
+              onValueChange={(value) => handleFilterChange('kev', value as FilterState['kev'])}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="All" />

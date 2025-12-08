@@ -1,6 +1,14 @@
 """Simple query builder for reducing SQL string duplication."""
 from typing import Dict, List, Tuple, Any, Optional
 
+from app.services.filter_registry import (
+    FILTER_FIELD_DEFINITIONS,
+    RANGE_FILTER_DEFINITIONS,
+    DATE_FILTER_DEFINITIONS,
+    normalize_list,
+    parse_boolean,
+)
+
 
 # Field mapping from API response keys to database column names
 DEVICE_VULNERABILITY_FIELD_MAP = {
@@ -131,7 +139,6 @@ def build_vulnerability_filters(
     """Build WHERE clause and parameters for vulnerability queries."""
     where_clauses: List[str] = []
     params: List[Any] = []
-    threat_intel_filter: Optional[Any] = None
 
     def qualify(column: str) -> str:
         return f"{table_alias}.{column}" if table_alias else column
@@ -142,68 +149,100 @@ def build_vulnerability_filters(
 
     if filters:
         threat_intel_filter = filters.get('threat_intel')
-        for field, value in filters.items():
-            if field in ['cvss_min', 'cvss_max', 'epss_min', 'epss_max', 'date_from', 'date_to', 'threat_intel', 'cve_public_exploit']:
-                continue
-            if isinstance(value, list) and value:
-                placeholders = ','.join(['%s'] * len(value))
-                where_clauses.append(f"{qualify(field)} IN ({placeholders})")
-                params.extend(value)
-            elif value:
-                where_clauses.append(f"{qualify(field)} LIKE %s")
-                params.append(f"%{value}%")
 
-    if threat_intel_filter:
-        threat_values = (
-            threat_intel_filter
-            if isinstance(threat_intel_filter, list)
-            else [threat_intel_filter]
-        )
-        mapping = {
-            'metasploit': 'metasploit_detected',
-            'nuclei': 'nuclei_detected',
-            'recordfuture': 'recordfuture_detected',
-        }
-        conditions = []
-        for raw_value in threat_values:
-            if not raw_value:
-                continue
-            column = mapping.get(str(raw_value).lower())
-            if column:
-                conditions.append(f"{qualify(column)} = TRUE")
-        if conditions:
-            where_clauses.append("(" + " OR ".join(conditions) + ")")
+        for field, definition in FILTER_FIELD_DEFINITIONS.items():
+            raw_value = filters.get(field)
+            clause, clause_params = _build_field_clause(definition, raw_value, qualify)
+            if clause:
+                where_clauses.append(clause)
+                params.extend(clause_params)
 
-    if filters:
-        cvss_min = filters.get('cvss_min')
-        cvss_max = filters.get('cvss_max')
-        if cvss_min:
-            where_clauses.append(f"{qualify('cvss_score')} >= %s")
-            params.append(float(cvss_min))
-        if cvss_max:
-            where_clauses.append(f"{qualify('cvss_score')} <= %s")
-            params.append(float(cvss_max))
-        epss_min = filters.get('epss_min')
-        epss_max = filters.get('epss_max')
-        if epss_min:
-            where_clauses.append(f"{qualify('cve_epss')} >= %s")
-            params.append(float(epss_min))
-        if epss_max:
-            where_clauses.append(f"{qualify('cve_epss')} <= %s")
-            params.append(float(epss_max))
-        kev_flag = filters.get('cve_public_exploit')
-        if kev_flag not in (None, ''):
-            bool_value = str(kev_flag).lower() in ['true', '1', 'yes']
-            where_clauses.append(f"{qualify('cve_public_exploit')} = %s")
-            params.append(bool_value)
-        date_from = filters.get('date_from')
-        date_to = filters.get('date_to')
-        if date_from:
-            where_clauses.append(f"{qualify('last_seen_timestamp')} >= %s")
-            params.append(date_from)
-        if date_to:
-            where_clauses.append(f"{qualify('last_seen_timestamp')} <= %s")
-            params.append(date_to)
-    
+        if threat_intel_filter:
+            threat_values = (
+                threat_intel_filter
+                if isinstance(threat_intel_filter, list)
+                else [threat_intel_filter]
+            )
+            mapping = {
+                'metasploit': 'metasploit_detected',
+                'nuclei': 'nuclei_detected',
+                'recordfuture': 'recordfuture_detected',
+            }
+            conditions = []
+            for raw_value in threat_values:
+                if not raw_value:
+                    continue
+                column = mapping.get(str(raw_value).lower())
+                if column:
+                    conditions.append(f"{qualify(column)} = TRUE")
+            if conditions:
+                where_clauses.append("(" + " OR ".join(conditions) + ")")
+
+        for field, definition in RANGE_FILTER_DEFINITIONS.items():
+            raw_value = filters.get(field)
+            clause, clause_params = _build_range_clause(definition, raw_value, qualify)
+            if clause:
+                where_clauses.append(clause)
+                params.extend(clause_params)
+
+        for field, definition in DATE_FILTER_DEFINITIONS.items():
+            raw_value = filters.get(field)
+            clause, clause_params = _build_date_clause(definition, raw_value, qualify)
+            if clause:
+                where_clauses.append(clause)
+                params.extend(clause_params)
+
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     return where_sql, params
+
+
+def _build_field_clause(definition: Dict[str, Any], raw_value: Any, qualify) -> Tuple[Optional[str], List[Any]]:
+    strategy = definition.get('strategy', 'contains')
+    column = qualify(definition['column'])
+
+    if strategy == 'in':
+        values = normalize_list(raw_value)
+        if not values:
+            return None, []
+        placeholders = ','.join(['%s'] * len(values))
+        return f"{column} IN ({placeholders})", values
+
+    if strategy == 'boolean':
+        parsed = parse_boolean(raw_value)
+        if parsed is None:
+            return None, []
+        return f"{column} = %s", [parsed]
+
+    if isinstance(raw_value, str):
+        value = raw_value.strip()
+    else:
+        value = raw_value
+
+    if not value:
+        return None, []
+
+    if strategy == 'equals':
+        return f"{column} = %s", [value]
+
+    return f"{column} LIKE %s", [f"%{value}%"]
+
+
+def _build_range_clause(definition: Dict[str, Any], raw_value: Any, qualify) -> Tuple[Optional[str], List[Any]]:
+    if raw_value in (None, ''):
+        return None, []
+    caster = definition.get('cast')
+    try:
+        value = caster(raw_value) if caster else raw_value
+    except (TypeError, ValueError):
+        return None, []
+    column = qualify(definition['column'])
+    operator = definition['operator']
+    return f"{column} {operator} %s", [value]
+
+
+def _build_date_clause(definition: Dict[str, Any], raw_value: Any, qualify) -> Tuple[Optional[str], List[Any]]:
+    if not raw_value:
+        return None, []
+    column = qualify(definition['column'])
+    operator = definition['operator']
+    return f"{column} {operator} %s", [raw_value]
