@@ -1,40 +1,4 @@
 services:
-  traefik:
-    image: traefik:v3.4
-    restart: unless-stopped
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.email=${TRAEFIK_ACME_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/acme/acme.json"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - acme_data:/acme
-    networks:
-      - app-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.traefik-dashboard.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/traefik`)"
-      - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.traefik-dashboard.tls=true"
-      - "traefik.http.routers.traefik-dashboard.tls.certresolver=myresolver"
-      - "traefik.http.middlewares.traefik-strip.stripprefix.prefixes=/traefik"
-      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-strip@docker"
-      - "traefik.http.routers.traefik-dashboard-redirect.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/traefik`)"
-      - "traefik.http.routers.traefik-dashboard-redirect.entrypoints=web"
-      - "traefik.http.routers.traefik-dashboard-redirect.middlewares=redirect-to-https@docker"
-
   app:
     build:
       context: .
@@ -49,19 +13,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.vuln.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/vulnmanagement`)"
-      - "traefik.http.routers.vuln.entrypoints=websecure"
-      - "traefik.http.routers.vuln.tls=true"
-      - "traefik.http.routers.vuln.tls.certresolver=myresolver"
-      - "traefik.http.services.vuln.loadbalancer.server.port=5001"
-      - "traefik.http.middlewares.vuln-strip.stripprefix.prefixes=/vulnmanagement"
-      - "traefik.http.middlewares.vuln-strip.stripprefix.forceSlash=true"
-      - "traefik.http.routers.vuln.middlewares=vuln-strip@docker"
-      - "traefik.http.routers.vuln-http.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/vulnmanagement`)"
-      - "traefik.http.routers.vuln-http.entrypoints=web"
-      - "traefik.http.routers.vuln-http.middlewares=vuln-strip@docker,redirect-to-https@docker"
+    ports:
+      - "5001:5001"
     networks:
       - app-network
 
