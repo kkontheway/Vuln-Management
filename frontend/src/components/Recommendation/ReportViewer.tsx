@@ -1,7 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import type { RecommendationReport, CVEVulnerabilityData } from '@/types/api';
+import type { RecommendationReport, CVEVulnerabilityData, AffectedDevice } from '@/types/api';
 import { cn } from '@/lib/utils';
 
 interface ReportViewerProps {
@@ -11,18 +11,134 @@ interface ReportViewerProps {
   showExportButtons?: boolean;
 }
 
-type Html2PdfChain = {
-  set: (options: Record<string, unknown>) => Html2PdfChain;
-  from: (element: HTMLElement) => Html2PdfChain;
-  save: () => Promise<void>;
+const CSS_VAR_FALLBACKS: Record<string, string> = {
+  '--background': '#ffffff',
+  '--foreground': '#111827',
+  '--card': '#ffffff',
+  '--card-foreground': '#111827',
+  '--popover': '#ffffff',
+  '--popover-foreground': '#111827',
+  '--primary': '#4338ca',
+  '--primary-hover': '#312e81',
+  '--primary-foreground': '#f8fafc',
+  '--secondary': '#f3f4f6',
+  '--secondary-foreground': '#111827',
+  '--muted': '#e2e8f0',
+  '--muted-foreground': '#475569',
+  '--accent': '#e0e7ff',
+  '--accent-foreground': '#111827',
+  '--border': '#e5e7eb',
+  '--pop': '#e5e7eb',
+  '--input': '#d1d5db',
+  '--ring': '#94a3b8',
+  '--success': '#16a34a',
+  '--warning': '#f59e0b',
+  '--destructive': '#dc2626',
+  '--severity-critical': '#b91c1c',
+  '--severity-high': '#f97316',
+  '--severity-medium': '#facc15',
+  '--severity-low': '#0ea5e9',
+  '--chart-1': '#f97316',
+  '--chart-2': '#14b8a6',
+  '--chart-3': '#8b5cf6',
+  '--chart-4': '#facc15',
+  '--chart-5': '#ef4444',
+  '--sidebar': '#0f172a',
+  '--sidebar-foreground': '#f8fafc',
+  '--sidebar-primary': '#4338ca',
+  '--sidebar-primary-foreground': '#f8fafc',
+  '--sidebar-accent': '#1e1b4b',
+  '--sidebar-accent-hover': '#312e81',
+  '--sidebar-accent-foreground': '#f8fafc',
+  '--sidebar-border': '#1f2937',
+  '--sidebar-ring': '#6366f1',
 };
 
-type Html2PdfModule = {
-  default: () => Html2PdfChain;
+const parsePercentageOrNumber = (token: string): number => {
+  const trimmed = token.trim();
+  if (trimmed.endsWith('%')) {
+    return parseFloat(trimmed) / 100;
+  }
+  return parseFloat(trimmed);
+};
+
+const oklchToRgb = (value: string): string | null => {
+  const match = value.match(/oklch\(\s*([^)]+)\)/i);
+  if (!match) {
+    return null;
+  }
+  const [componentsPart, alphaPart] = match[1].split('/').map((part) => part.trim());
+  const [lStr, cStr, hStr] = componentsPart.trim().split(/\s+/);
+  const L = parsePercentageOrNumber(lStr);
+  const C = parseFloat(cStr);
+  const hRaw = hStr.endsWith('deg') ? parseFloat(hStr) : parseFloat(hStr);
+  const hRad = (hRaw * Math.PI) / 180;
+  const aComp = Math.cos(hRad) * C;
+  const bComp = Math.sin(hRad) * C;
+
+  const lVal = L + 0.3963377774 * aComp + 0.2158037573 * bComp;
+  const mVal = L - 0.1055613458 * aComp - 0.0638541728 * bComp;
+  const sVal = L - 0.0894841775 * aComp - 1.2914855480 * bComp;
+
+  const lCubed = lVal ** 3;
+  const mCubed = mVal ** 3;
+  const sCubed = sVal ** 3;
+
+  const rLinear = 4.0767416621 * lCubed - 3.3077115913 * mCubed + 0.2309699292 * sCubed;
+  const gLinear = -1.2684380046 * lCubed + 2.6097574011 * mCubed - 0.3413193965 * sCubed;
+  const bLinear = -0.0041960863 * lCubed - 0.7034186147 * mCubed + 1.7076147010 * sCubed;
+
+  const linearToSrgb = (x: number): number => {
+    const constrained = Math.max(0, Math.min(1, x));
+    if (constrained <= 0.0031308) {
+      return constrained * 12.92;
+    }
+    return 1.055 * Math.pow(constrained, 1 / 2.4) - 0.055;
+  };
+
+  const formatChannel = (channel: number): number => {
+    return Math.round(Math.max(0, Math.min(1, channel)) * 255);
+  };
+
+  const r = formatChannel(linearToSrgb(rLinear));
+  const g = formatChannel(linearToSrgb(gLinear));
+  const b = formatChannel(linearToSrgb(bLinear));
+
+  let alpha = 1;
+  if (alphaPart) {
+    alpha = parsePercentageOrNumber(alphaPart);
+  }
+
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+    return null;
+  }
+
+  if (alpha < 1) {
+    const alphaFormatted = Math.max(0, Math.min(1, alpha));
+    return `rgba(${r}, ${g}, ${b}, ${alphaFormatted})`;
+  }
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+const applyOklchFallbacks = (doc: Document) => {
+  const root = doc.documentElement;
+  const win = doc.defaultView;
+  const computedStyle = win?.getComputedStyle(root);
+
+  Object.entries(CSS_VAR_FALLBACKS).forEach(([variable, fallback]) => {
+    const current = computedStyle?.getPropertyValue(variable).trim();
+    if (current && current.includes('oklch(')) {
+      const converted = oklchToRgb(current);
+      root.style.setProperty(variable, converted ?? fallback);
+    } else if (!current || current === '') {
+      root.style.setProperty(variable, fallback);
+    }
+  });
 };
 
 const ReportViewer = ({ report, vulnerabilityData, onClose, showExportButtons = true }: ReportViewerProps) => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const getSeverityColor = (severity: string | null | undefined) => {
     if (!severity) return 'bg-gray-500';
@@ -45,25 +161,53 @@ const ReportViewer = ({ report, vulnerabilityData, onClose, showExportButtons = 
   };
 
   const exportToPDF = async () => {
-    if (!reportRef.current) return;
-    
+    if (!reportRef.current) {
+      return;
+    }
+
     try {
-      // Dynamic import for html2pdf.js to work with Vite
-      const html2pdfModule = (await import('html2pdf.js')) as Html2PdfModule;
-      const html2pdf = html2pdfModule.default;
-      const element = reportRef.current;
-      const opt: Record<string, unknown> = {
-        margin: 0.5,
-        filename: `Vulnerability_Report_${report.cve_id}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-      
-      await html2pdf().set(opt).from(element).save();
+      setIsExportingPdf(true);
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc: Document) => {
+          applyOklchFallbacks(clonedDoc);
+        },
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`Vulnerability_Report_${report.cve_id}.pdf`);
     } catch (error) {
       console.error('Error exporting to PDF:', error);
-      alert('Failed to export PDF. Please try again.');
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`Failed to export PDF: ${message}`);
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -121,6 +265,33 @@ ${htmlContent}
   const devices = vulnerabilityData?.affected_devices || [];
   const evidence = vulnerabilityData?.evidence;
   const remediation = vulnerabilityData?.remediation;
+  const description = vulnerabilityData?.description;
+
+  const renderDeviceEvidence = (device: AffectedDevice) => {
+    const diskPaths = device.disk_paths?.filter(Boolean) ?? [];
+    const registryPaths = device.registry_paths?.filter(Boolean) ?? [];
+
+    if (diskPaths.length === 0 && registryPaths.length === 0) {
+      return <span className="text-gray-500 text-xs">N/A</span>;
+    }
+
+    return (
+      <div className="space-y-1">
+        {diskPaths.slice(0, 2).map((path, idx) => (
+          <div key={`disk-${idx}`} className="text-xs break-all text-gray-700">
+            <span className="font-semibold text-yellow-700 mr-1">[FILE]</span>
+            {path}
+          </div>
+        ))}
+        {registryPaths.slice(0, 2).map((path, idx) => (
+          <div key={`reg-${idx}`} className="text-xs break-all text-gray-700">
+            <span className="font-semibold text-yellow-700 mr-1">[REG]</span>
+            {path}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const primaryOsLabel = summary?.os_distribution
     ? Object.entries(summary.os_distribution)
@@ -143,8 +314,9 @@ ${htmlContent}
             onClick={() => {
               void exportToPDF();
             }}
+            disabled={isExportingPdf}
           >
-            Export PDF
+            {isExportingPdf ? 'Exporting...' : 'Export PDF'}
           </Button>
           <Button variant="outline" onClick={exportToHTML}>
             Export HTML
@@ -188,6 +360,18 @@ ${htmlContent}
 
         {/* Body */}
         <div className="p-8">
+          {description && (
+            <div className="mb-8">
+              <h2 className="text-base font-bold text-blue-900 border-l-4 border-blue-500 pl-3 mb-4 uppercase tracking-wide">
+                Vulnerability Description
+              </h2>
+              <Card className="bg-gray-50 p-4 border border-gray-200">
+                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                  {description}
+                </p>
+              </Card>
+            </div>
+          )}
           {/* Impact Scope & Software Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Impact Scope Summary */}
@@ -267,12 +451,12 @@ ${htmlContent}
               <h2 className="text-base font-bold text-blue-900 border-l-4 border-blue-500 pl-3 mb-4 uppercase tracking-wide flex justify-between items-center">
                 <span>Affected Device List</span>
                 <span className="bg-gray-100 text-blue-900 px-2 py-1 rounded text-xs font-semibold">
-                  Showing top {Math.min(devices.length, 50)} of {summary?.total_affected_hosts || devices.length}
+                  Showing all {devices.length} devices
                 </span>
               </h2>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
-                  <table className="w-full text-sm min-w-[600px]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[750px]">
                     <thead className="bg-gray-100 sticky top-0">
                       <tr>
                         <th className="text-left p-3 font-semibold text-blue-900">Hostname</th>
@@ -280,10 +464,11 @@ ${htmlContent}
                         <th className="text-left p-3 font-semibold text-blue-900">OS Version</th>
                         <th className="text-left p-3 font-semibold text-blue-900">User</th>
                         <th className="text-left p-3 font-semibold text-blue-900">Status</th>
+                        <th className="text-left p-3 font-semibold text-blue-900">Evidence Paths</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {devices.slice(0, 50).map((device, idx) => (
+                      {devices.map((device, idx) => (
                         <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                           <td className="p-3 font-medium">{device.device_name || device.device_id}</td>
                           <td className="p-3 text-gray-700">N/A</td>
@@ -296,6 +481,9 @@ ${htmlContent}
                               <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
                               {device.status || 'Vulnerable'}
                             </span>
+                          </td>
+                          <td className="p-3">
+                            {renderDeviceEvidence(device)}
                           </td>
                         </tr>
                       ))}

@@ -124,134 +124,14 @@ def get_cve_vulnerabilities_by_report(report_id: int):
         
         if not cve_id:
             return jsonify({'error': 'CVE ID not found in report'}), 400
-        
-        # Get all vulnerabilities for this CVE
-        filters = {'cve_id': cve_id}
-        result = vuln_service.get_vulnerabilities(filters=filters, page=1, per_page=1000)
-        
-        vulnerabilities = result.get('data', [])
-        
-        # Calculate statistics
-        total_devices = len(set(v.get('device_id') for v in vulnerabilities if v.get('device_id')))
-        
-        # OS distribution
-        os_distribution = {}
-        for v in vulnerabilities:
-            os_platform = v.get('os_platform', 'Unknown')
-            if os_platform:
-                os_distribution[os_platform] = os_distribution.get(os_platform, 0) + 1
-        
-        # Department distribution
-        dept_distribution = {}
-        for v in vulnerabilities:
-            dept = v.get('rbac_group_name', 'Unknown')
-            if dept:
-                dept_distribution[dept] = dept_distribution.get(dept, 0) + 1
-        
-        # Get unique software info (should be same for all)
-        software_info = {}
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            software_info = {
-                'vendor': first_vuln.get('software_vendor', ''),
-                'name': first_vuln.get('software_name', ''),
-                'version': first_vuln.get('software_version', '')
-            }
-        
-        # Get CVSS score and severity (should be same for all)
-        cvss_score = None
-        severity = None
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            cvss_score = first_vuln.get('cvss_score')
-            severity = first_vuln.get('vulnerability_severity_level') or first_vuln.get('severity')
-        
-        # Get affected devices list (unique devices)
-        affected_devices = []
-        seen_devices = set()
-        for v in vulnerabilities:
-            device_id = v.get('device_id')
-            if device_id and device_id not in seen_devices:
-                seen_devices.add(device_id)
-                affected_devices.append({
-                    'device_id': device_id,
-                    'device_name': v.get('device_name', ''),
-                    'os_platform': v.get('os_platform', ''),
-                    'os_version': v.get('os_version', ''),
-                    'rbac_group_name': v.get('rbac_group_name', ''),
-                    'status': v.get('status', 'Vulnerable')
-                })
-        
-        # Get evidence paths (from first vulnerability as sample)
-        evidence = {
-            'disk_paths': [],
-            'registry_paths': []
-        }
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            disk_paths = first_vuln.get('disk_paths', [])
-            registry_paths = first_vuln.get('registry_paths', [])
-            
-            if isinstance(disk_paths, list):
-                evidence['disk_paths'] = disk_paths
-            elif isinstance(disk_paths, str):
-                try:
-                    import json
-                    evidence['disk_paths'] = json.loads(disk_paths)
-                except:
-                    evidence['disk_paths'] = [disk_paths] if disk_paths else []
-            
-            if isinstance(registry_paths, list):
-                evidence['registry_paths'] = registry_paths
-            elif isinstance(registry_paths, str):
-                try:
-                    import json
-                    evidence['registry_paths'] = json.loads(registry_paths)
-                except:
-                    evidence['registry_paths'] = [registry_paths] if registry_paths else []
-        
-        # Get remediation info
-        remediation = {}
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            remediation = {
-                'security_update_available': first_vuln.get('security_update_available', False),
-                'recommended_security_update': first_vuln.get('recommended_security_update', ''),
-                'recommended_security_update_id': first_vuln.get('recommended_security_update_id', ''),
-                'recommended_security_update_url': first_vuln.get('recommended_security_update_url', ''),
-                'recommendation_reference': first_vuln.get('recommendation_reference', '')
-            }
-        
-        return _build_vulnerability_response(
-            cve_id, vulnerabilities, total_devices, os_distribution, 
-            dept_distribution, cvss_score, severity, software_info, 
-            affected_devices, evidence, remediation
-        )
-        
+        report_data = vuln_service.get_cve_vulnerability_report_data(cve_id, device_limit=50)
+        if not report_data:
+            return jsonify({'error': 'No vulnerability data found'}), 404
+
+        return jsonify(report_data)
     except Exception as e:
         logger.error(f"Error getting CVE vulnerabilities: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
-
-def _build_vulnerability_response(cve_id, vulnerabilities, total_devices, os_distribution, 
-                                  dept_distribution, cvss_score, severity, software_info, 
-                                  affected_devices, evidence, remediation):
-    """Helper function to build vulnerability response."""
-    return jsonify({
-        'cve_id': cve_id,
-        'summary': {
-            'total_affected_hosts': total_devices,
-            'os_distribution': os_distribution,
-            'department_distribution': dept_distribution,
-            'cvss_score': cvss_score,
-            'severity': severity
-        },
-        'software': software_info,
-        'affected_devices': affected_devices[:50],  # Limit to top 50 for display
-        'evidence': evidence,
-        'remediation': remediation,
-        'total_vulnerabilities': len(vulnerabilities)
-    })
 
 
 @bp.route('/cve/<cve_id>/vulnerabilities', methods=['GET'])
@@ -260,110 +140,12 @@ def get_cve_vulnerabilities_by_cve(cve_id: str):
     try:
         if not cve_id:
             return jsonify({'error': 'CVE ID is required'}), 400
-        
-        # Get all vulnerabilities for this CVE
-        filters = {'cve_id': cve_id}
-        result = vuln_service.get_vulnerabilities(filters=filters, page=1, per_page=1000)
-        
-        vulnerabilities = result.get('data', [])
-        
-        # Calculate statistics
-        total_devices = len(set(v.get('device_id') for v in vulnerabilities if v.get('device_id')))
-        
-        # OS distribution
-        os_distribution = {}
-        for v in vulnerabilities:
-            os_platform = v.get('os_platform', 'Unknown')
-            if os_platform:
-                os_distribution[os_platform] = os_distribution.get(os_platform, 0) + 1
-        
-        # Department distribution
-        dept_distribution = {}
-        for v in vulnerabilities:
-            dept = v.get('rbac_group_name', 'Unknown')
-            if dept:
-                dept_distribution[dept] = dept_distribution.get(dept, 0) + 1
-        
-        # Get unique software info (should be same for all)
-        software_info = {}
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            software_info = {
-                'vendor': first_vuln.get('software_vendor', ''),
-                'name': first_vuln.get('software_name', ''),
-                'version': first_vuln.get('software_version', '')
-            }
-        
-        # Get CVSS score and severity (should be same for all)
-        cvss_score = None
-        severity = None
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            cvss_score = first_vuln.get('cvss_score')
-            severity = first_vuln.get('vulnerability_severity_level') or first_vuln.get('severity')
-        
-        # Get affected devices list (unique devices)
-        affected_devices = []
-        seen_devices = set()
-        for v in vulnerabilities:
-            device_id = v.get('device_id')
-            if device_id and device_id not in seen_devices:
-                seen_devices.add(device_id)
-                affected_devices.append({
-                    'device_id': device_id,
-                    'device_name': v.get('device_name', ''),
-                    'os_platform': v.get('os_platform', ''),
-                    'os_version': v.get('os_version', ''),
-                    'rbac_group_name': v.get('rbac_group_name', ''),
-                    'status': v.get('status', 'Vulnerable')
-                })
-        
-        # Get evidence paths (from first vulnerability as sample)
-        evidence = {
-            'disk_paths': [],
-            'registry_paths': []
-        }
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            disk_paths = first_vuln.get('disk_paths', [])
-            registry_paths = first_vuln.get('registry_paths', [])
-            
-            if isinstance(disk_paths, list):
-                evidence['disk_paths'] = disk_paths
-            elif isinstance(disk_paths, str):
-                try:
-                    import json
-                    evidence['disk_paths'] = json.loads(disk_paths)
-                except:
-                    evidence['disk_paths'] = [disk_paths] if disk_paths else []
-            
-            if isinstance(registry_paths, list):
-                evidence['registry_paths'] = registry_paths
-            elif isinstance(registry_paths, str):
-                try:
-                    import json
-                    evidence['registry_paths'] = json.loads(registry_paths)
-                except:
-                    evidence['registry_paths'] = [registry_paths] if registry_paths else []
-        
-        # Get remediation info
-        remediation = {}
-        if vulnerabilities:
-            first_vuln = vulnerabilities[0]
-            remediation = {
-                'security_update_available': first_vuln.get('security_update_available', False),
-                'recommended_security_update': first_vuln.get('recommended_security_update', ''),
-                'recommended_security_update_id': first_vuln.get('recommended_security_update_id', ''),
-                'recommended_security_update_url': first_vuln.get('recommended_security_update_url', ''),
-                'recommendation_reference': first_vuln.get('recommendation_reference', '')
-            }
-        
-        return _build_vulnerability_response(
-            cve_id, vulnerabilities, total_devices, os_distribution, 
-            dept_distribution, cvss_score, severity, software_info, 
-            affected_devices, evidence, remediation
-        )
-        
+        report_data = vuln_service.get_cve_vulnerability_report_data(cve_id, device_limit=50)
+        if not report_data:
+            return jsonify({'error': 'Vulnerability data not found'}), 404
+        return jsonify(report_data)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Error getting CVE vulnerabilities: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500

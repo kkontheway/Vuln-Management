@@ -325,6 +325,8 @@ export interface AffectedDevice {
   os_version: string;
   rbac_group_name: string;
   status: string;
+  disk_paths?: string[];
+  registry_paths?: string[];
 }
 
 export interface ImpactScopeSummary {
@@ -361,6 +363,7 @@ export interface CVEVulnerabilityData {
   affected_devices: AffectedDevice[];
   evidence: Evidence;
   remediation: RemediationInfo;
+  description: string | null;
   total_vulnerabilities: number;
 }
 export interface SyncProgressSource {
