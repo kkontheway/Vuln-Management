@@ -10,13 +10,14 @@
 - 💬 **AI聊天助手** - 内置AI助手，帮助分析漏洞数据
 - 📱 **响应式设计** - 适配各种屏幕尺寸
 - ⚡ **高性能** - 支持20万+数据的高效查询和分页
+- 🔐 **身份扩展** - 已预留 Microsoft Entra ID 接入点
 
 ## 系统架构
 
 ```
 VulnManagement/
 ├── defender.py          # Defender API数据同步脚本
-├── app.py              # Flask后端API服务器
+├── app.py              # FastAPI后端API服务器
 ├── servicenow_client.py # ServiceNow API客户端
 ├── frontend/           # React前端应用
 │   ├── src/           # 源代码
@@ -75,16 +76,18 @@ INTEGRATIONS_SECRET_KEY=base64-url-safe-32-byte-key
 ```
 > `.env` 会被 `config.py` 自动读取，`initialize_app_database()` 会在后端启动时建表/迁移。
 
-### 4. 安装并运行 Flask 后端
+### 4. 安装并运行 FastAPI 后端
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python app.py  # 前台验证
+uvicorn app:app --host 0.0.0.0 --port 5001 --reload  # 开发模式
+# 或使用脚本封装
+python app.py  # 调用 uvicorn.run，适合本地验证
 nohup python app.py > backend.log 2>&1 &  # 后台常驻
 ```
 - API 地址：`http://127.0.0.1:5001/api/...`
-- 使用 `tail -f backend.log` 或 `lsof -i :5001` 检查运行情况。
+- 使用 `tail -f backend.log`、`lsof -i :5001` 或 `uvicorn --version`/`ps aux | grep uvicorn` 检查运行情况。
 
 ### 5. 构建 React 前端
 ```bash
@@ -92,7 +95,7 @@ cd frontend
 npm install  # 首次
 npm run build
 ```
-- 构建产物位于 `frontend/dist`，Flask 会自动作为静态目录。
+- 构建产物位于 `frontend/dist`，FastAPI 会自动作为静态目录。
 - 若想由 Nginx 直接托管，可 `rsync -av frontend/dist/ /var/www/vuln-frontend/`。
 
 ### 6. 配置 Nginx（统一 80 端口）
@@ -321,7 +324,7 @@ def export_vulnerabilities():
 - 注意 `/api/vulnerabilities` API需要 `Vulnerability.Read.All` 权限（Application）或 `Vulnerability.Read` 权限（Delegated）
 
 ### 前端无法加载
-- 确认Flask服务器正在运行
+- 确认FastAPI服务器正在运行
 - 检查浏览器控制台错误
 - 确认静态文件路径正确
 

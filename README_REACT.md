@@ -24,7 +24,7 @@ cd frontend
 npm run dev
 ```
 
-The React app will proxy API requests to the Flask backend running on `http://localhost:5001`.
+The React app will proxy API requests to the FastAPI backend running on `http://localhost:5001`.
 
 ### Production Build
 
@@ -37,7 +37,7 @@ npm run build
 
 This will create a `dist/` directory with the production build.
 
-### Running with Flask Backend
+### Running with FastAPI Backend
 
 1. Build the React app:
    ```bash
@@ -45,14 +45,15 @@ This will create a `dist/` directory with the production build.
    npm run build
    ```
 
-2. Run the Flask backend:
+2. Run the FastAPI backend:
    ```bash
-   python3 app.py
+   uvicorn app:app --host 0.0.0.0 --port 5001 --reload
+   # or python app.py
    ```
 
 3. Access the application at `http://localhost:5001`
 
-The Flask backend is configured to serve the React app from `frontend/dist/` for all non-API routes.
+The FastAPI backend is configured to serve the React app from `frontend/dist/` for all non-API routes.
 
 ## Project Structure
 
@@ -96,4 +97,3 @@ frontend/
 ## Migration Notes
 
 The frontend has been fully migrated to React. All functionality from the previous HTML/CSS/JavaScript implementation has been preserved and improved with better code organization and maintainability.
-

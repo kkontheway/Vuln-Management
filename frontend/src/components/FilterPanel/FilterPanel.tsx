@@ -29,6 +29,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     cve_ids: string[];
     device_names: string[];
     vendors: string[];
+    deviceTags: string[];
   }>({
     severities: [],
     platforms: [],
@@ -36,9 +37,12 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
     cve_ids: [],
     device_names: [],
     vendors: [],
+    deviceTags: [],
   });
   const [vendorDropdownOpen, setVendorDropdownOpen] = useState(false);
   const vendorDropdownRef = useRef<HTMLDivElement>(null);
+  const [deviceTagDropdownOpen, setDeviceTagDropdownOpen] = useState(false);
+  const deviceTagDropdownRef = useRef<HTMLDivElement>(null);
   const [threatIntelDropdownOpen, setThreatIntelDropdownOpen] = useState(false);
   const threatIntelDropdownRef = useRef<HTMLDivElement>(null);
   const threatIntelOptions = [
@@ -60,6 +64,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
         cve_ids: [],
         device_names: [],
         vendors: data.software_vendor || [],
+        deviceTags: data.device_tag || [],
       });
     } catch (error) {
       console.error('Failed to load filter options:', error);
@@ -71,6 +76,7 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
         cve_ids: [],
         device_names: [],
         vendors: [],
+        deviceTags: [],
       });
     }
   };
@@ -91,6 +97,16 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
   const getSelectedVendors = (): string[] => {
     return filters.vendors;
   };
+
+  const handleDeviceTagToggle = (deviceTag: string) => {
+    const isSelected = filters.deviceTags.includes(deviceTag);
+    const next = isSelected
+      ? filters.deviceTags.filter(tag => tag !== deviceTag)
+      : [...filters.deviceTags, deviceTag];
+    handleFilterChange('deviceTags', next);
+  };
+
+  const getSelectedDeviceTags = (): string[] => filters.deviceTags;
 
   const handleThreatIntelToggle = (value: string) => {
     const isSelected = filters.threatIntel.includes(value);
@@ -125,19 +141,22 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
       if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(target)) {
         setVendorDropdownOpen(false);
       }
+      if (deviceTagDropdownRef.current && !deviceTagDropdownRef.current.contains(target)) {
+        setDeviceTagDropdownOpen(false);
+      }
       if (threatIntelDropdownRef.current && !threatIntelDropdownRef.current.contains(target)) {
         setThreatIntelDropdownOpen(false);
       }
     };
 
-    if (vendorDropdownOpen || threatIntelDropdownOpen) {
+    if (vendorDropdownOpen || threatIntelDropdownOpen || deviceTagDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [vendorDropdownOpen, threatIntelDropdownOpen]);
+  }, [vendorDropdownOpen, threatIntelDropdownOpen, deviceTagDropdownOpen]);
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -335,6 +354,58 @@ const FilterPanel = ({ onFilterChange }: FilterPanelProps) => {
                             onCheckedChange={() => handleVendorToggle(vendor)}
                           />
                           <span className="text-sm text-text-primary flex-1">{vendor}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="space-y-2 relative" ref={deviceTagDropdownRef}>
+            <label className="text-xs font-medium text-text-secondary">Device Tag</label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeviceTagDropdownOpen(!deviceTagDropdownOpen)}
+              className="w-full justify-between h-8 text-xs bg-white text-text-primary dark:bg-[#050506] dark:text-white"
+              size="sm"
+            >
+              <span>
+                {getSelectedDeviceTags().length > 0
+                  ? `${getSelectedDeviceTags().length} tag(s) selected`
+                  : 'Select device tags'}
+              </span>
+              <svg
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  deviceTagDropdownOpen && "rotate-180"
+                )}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </Button>
+            {deviceTagDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 rounded-lg border border-glass-border bg-white text-text-primary shadow-lg max-h-60 overflow-auto dark:bg-[#050506] dark:text-white">
+                <div className="p-2 space-y-2">
+                  {filterOptions.deviceTags.length === 0 ? (
+                    <div className="text-sm text-text-secondary p-2">No tags available</div>
+                  ) : (
+                    filterOptions.deviceTags.map((tag) => {
+                      const isSelected = getSelectedDeviceTags().includes(tag);
+                      return (
+                        <label
+                          key={tag}
+                          className="flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-black/5 dark:hover:bg-white/10"
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleDeviceTagToggle(tag)}
+                          />
+                          <span className="text-sm text-text-primary flex-1 capitalize">{tag}</span>
                         </label>
                       );
                     })

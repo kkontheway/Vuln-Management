@@ -99,7 +99,7 @@ const api: AxiosInstance = axios.create({
     Object.keys(params).forEach((key) => {
       const value = params[key];
       if (Array.isArray(value)) {
-        // For arrays, add each value with the same key (for Flask getlist)
+        // For arrays, add each value with the same key (aligns with FastAPI query parsing)
         value.forEach((item) => {
           searchParams.append(key, String(item));
         });

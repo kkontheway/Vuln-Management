@@ -12,6 +12,8 @@ from app.constants.database import (
     TABLE_RECOMMENDATION_REPORTS,
     TABLE_RAPID_VULNERABILITIES,
     TABLE_NUCLEI_VULNERABILITIES,
+    TABLE_DEVICE_TAG_RULES,
+    TABLE_DEVICE_TAGS,
 )
 
 logger = logging.getLogger(__name__)
@@ -200,6 +202,31 @@ def migrate_database(connection):
                             logger.warning("Error adding %s column: %s", column_name, e)
                             connection.rollback()
 
+            # Ensure device_tag column exists for device classification
+            try:
+                cursor.execute(f"SELECT device_tag FROM {TABLE_VULNERABILITIES} LIMIT 1")
+                cursor.fetchone()
+                logger.info("%s table already has device_tag column", TABLE_VULNERABILITIES)
+            except Error:
+                logger.info("Adding device_tag column to %s table...", TABLE_VULNERABILITIES)
+                try:
+                    cursor.execute(
+                        f"ALTER TABLE {TABLE_VULNERABILITIES} "
+                        f"ADD COLUMN device_tag VARCHAR(50) AFTER device_name"
+                    )
+                    cursor.execute(
+                        f"CREATE INDEX idx_device_tag ON {TABLE_VULNERABILITIES}(device_tag)"
+                    )
+                    connection.commit()
+                    logger.info("Successfully added device_tag column and index")
+                except Error as e:
+                    error_msg = str(e).lower()
+                    if 'duplicate column' in error_msg or 'already exists' in error_msg or 'duplicate key' in error_msg:
+                        logger.info("device_tag column or index already exists, skipping")
+                    else:
+                        logger.warning("Error adding device_tag column: %s", e)
+                        connection.rollback()
+
         except Error:
             # Table doesn't exist, will be created by initialize_database
             logger.info(f"{TABLE_VULNERABILITIES} table doesn't exist, will be created")
@@ -266,6 +293,7 @@ def initialize_database(connection):
             cve_id VARCHAR(50),
             device_id VARCHAR(100),
             device_name VARCHAR(255),
+            device_tag VARCHAR(50),
             rbac_group_name VARCHAR(100),
             os_platform VARCHAR(50),
             os_version VARCHAR(50),
@@ -302,6 +330,7 @@ def initialize_database(connection):
             INDEX idx_metasploit_detected (metasploit_detected),
             INDEX idx_nuclei_detected (nuclei_detected),
             INDEX idx_recordfuture_detected (recordfuture_detected),
+            INDEX idx_device_tag (device_tag),
             INDEX idx_last_seen (last_seen_timestamp),
             INDEX idx_first_seen (first_seen_timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -429,6 +458,34 @@ def initialize_database(connection):
             INDEX idx_nuclei_cve_id (cve_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """
+
+        device_tag_rules_table = f"""
+        CREATE TABLE IF NOT EXISTS {TABLE_DEVICE_TAG_RULES} (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tag VARCHAR(50) NOT NULL,
+            pattern VARCHAR(255) NOT NULL,
+            priority INT DEFAULT 100,
+            enabled BOOLEAN DEFAULT TRUE,
+            notes VARCHAR(255),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_tag_pattern (tag, pattern),
+            INDEX idx_tag_priority (tag, priority)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
+
+        device_tags_table = f"""
+        CREATE TABLE IF NOT EXISTS {TABLE_DEVICE_TAGS} (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            device_id VARCHAR(100),
+            device_name VARCHAR(255) NOT NULL,
+            tag VARCHAR(50) NOT NULL,
+            source VARCHAR(50) DEFAULT 'rule',
+            detected_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_device_name (device_name),
+            INDEX idx_tag (tag)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """
         
         cursor.execute(vulnerabilities_table)
         cursor.execute(sync_state_table)
@@ -438,8 +495,15 @@ def initialize_database(connection):
         cursor.execute(recommendation_reports_table)
         cursor.execute(rapid_vulnerabilities_table)
         cursor.execute(nuclei_vulnerabilities_table)
+        cursor.execute(device_tag_rules_table)
+        cursor.execute(device_tags_table)
         
         connection.commit()
+        try:
+            from app.services.device_tag_service import seed_default_rules
+            seed_default_rules(connection)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("Failed to seed default device tag rules: %s", exc)
         logger.info("Database table structure initialized successfully")
         
     except Error as e:
@@ -485,7 +549,9 @@ def drop_all_tables(connection):
             "vulnerabilities",  # New table, will be recreated
             "vulnerabilities_temp",  # Temporary table from previous sync
             "vulnerabilities_old",  # Old table from previous sync
-            "defender_vulnerability_catalog"
+            "defender_vulnerability_catalog",
+            "device_tag_rules",
+            "device_tags",
         ]
         
         # Drop tables one by one

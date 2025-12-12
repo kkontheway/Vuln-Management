@@ -1,24 +1,28 @@
-"""Dashboard trend API routes."""
-from flask import Blueprint, jsonify, request
+"""Dashboard trend API routes via FastAPI."""
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.services import trend_service
+from app.utils.auth import auth_guard
 
-bp = Blueprint('dashboard_trends', __name__, url_prefix='/api')
+router = APIRouter(
+    prefix="/api",
+    tags=["Dashboard"],
+    dependencies=[Depends(auth_guard)],
+)
 
 
-@bp.route('/dashboard/trends', methods=['GET'])
-def get_dashboard_trends():
+@router.get("/dashboard/trends")
+def get_dashboard_trends(period: Optional[List[str]] = Query(default=None)):
     """Return materialized dashboard trend data."""
-    period_param = request.args.get('period')
-    periods = None
-    if period_param:
-        periods = [value.strip().lower() for value in period_param.split(',') if value.strip()]
+    periods = [value.strip().lower() for value in period or [] if value.strip()]
 
     try:
-        data = trend_service.fetch_trend_payload(periods)
-    except ValueError as exc:
-        return jsonify({'error': str(exc)}), 400
-    except Exception as exc:  # pragma: no cover - defensive handler
-        return jsonify({'error': str(exc)}), 500
+        data = trend_service.fetch_trend_payload(periods or None)
+    except ValueError as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    return jsonify({'periods': data})
+    return {"periods": data}

@@ -10,6 +10,7 @@ from app.integrations.defender.repository import (
     update_sync_time
 )
 from app.constants.database import SYNC_TYPE_FULL, TABLE_VULNERABILITIES
+from app.services.device_tag_service import apply_device_tag_rules
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,12 @@ def sync_device_vulnerabilities_full(connection, access_token: Optional[str] = N
             
             if saved_count == 0:
                 raise Exception(f"CRITICAL: No records found in database after save operation! Expected {len(vulnerabilities)} records.")
+            
+            try:
+                tagged_count = apply_device_tag_rules(connection)
+                logger.info("Device tag rules applied to %s records", tagged_count)
+            except Exception as tag_error:  # pragma: no cover - defensive logging
+                logger.warning("Device tag rule application failed: %s", tag_error, exc_info=True)
             
             logger.info(f"Device vulnerability details full sync completed, fetched {len(vulnerabilities)} records, saved {saved_count} records")
             

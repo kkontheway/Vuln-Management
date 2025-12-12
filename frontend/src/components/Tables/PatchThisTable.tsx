@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,14 +14,39 @@ import { formatDate } from '@/utils/formatters';
 import VulnerabilityDetailDialog from '@/components/Table/components/VulnerabilityDetailDialog';
 import { renderSeverityBadge } from '@/components/Table/components/severityBadge';
 
+export type DeviceTagFilter = 'victrex' | 'panjin' | 'txv';
+
 interface PatchThisTableProps {
   data: Vulnerability[];
   title?: string;
+  activeDeviceTag: DeviceTagFilter;
+  onDeviceTagChange: (tag: DeviceTagFilter) => void;
 }
 
-const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
+const DEVICE_TAG_OPTIONS: { label: string; value: DeviceTagFilter }[] = [
+  { label: 'Victrex', value: 'victrex' },
+  { label: 'PanJin', value: 'panjin' },
+  { label: 'TxV', value: 'txv' },
+];
+
+const PatchThisTable = ({
+  data,
+  title = 'PatchThis',
+  activeDeviceTag,
+  onDeviceTagChange,
+}: PatchThisTableProps) => {
   const [selectedVuln, setSelectedVuln] = useState<Vulnerability | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  const filteredData = useMemo(() => {
+    if (!activeDeviceTag) {
+      return data;
+    }
+    return data.filter((item) => {
+      const tags = item.device_tags?.map((tag) => tag.toLowerCase().trim());
+      return tags?.includes(activeDeviceTag);
+    });
+  }, [data, activeDeviceTag]);
 
   const handleViewDetails = (vuln: Vulnerability) => {
     setSelectedVuln(vuln);
@@ -118,18 +143,30 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
 
   return (
     <Card className="glass-panel">
-      <CardHeader>
+      <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <CardTitle className="text-lg flex items-center gap-2">
           {title}
           <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary border border-primary/30">
-            {data.length}
+            {filteredData.length}
           </span>
         </CardTitle>
+        <div className="flex gap-2">
+          {DEVICE_TAG_OPTIONS.map((option) => (
+            <Button
+              key={option.value}
+              variant={option.value === activeDeviceTag ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onDeviceTagChange(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
-        {data.length === 0 ? (
+        {filteredData.length === 0 ? (
           <div className="flex h-[200px] items-center justify-center text-text-tertiary">
-            No urgent vulnerabilities found
+            No urgent vulnerabilities found for {DEVICE_TAG_OPTIONS.find((option) => option.value === activeDeviceTag)?.label ?? 'selected tag'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -149,7 +186,7 @@ const PatchThisTable = ({ data, title = 'PatchThis' }: PatchThisTableProps) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.map((item) => (
+                  {filteredData.map((item) => (
                     <TableRow key={item.cve_id}>
                       <TableCell className="font-semibold text-text-primary">
                         {item.cve_id}

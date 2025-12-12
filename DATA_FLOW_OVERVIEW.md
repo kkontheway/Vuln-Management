@@ -7,6 +7,7 @@
 | 表 / 数据集 | 关键字段 | 写入来源 | 主要消费者 | 备注 |
 | --- | --- | --- | --- | --- |
 | `vulnerabilities` | `cve_id`, 设备/软件字段, `cvss_score`, `status`, `cve_epss`, `cve_public_exploit`, `metasploit_detected`, `nuclei_detected`, `recordfuture_detected`, `last_synced` 等 | `app/integrations/defender/repository.save_vulnerabilities`（全量表切换），Threat intel 标记脚本，DuckDB enrichment（填充 `cve_epss`），KEV enrichment（刷新 `cve_public_exploit`） | `/api/vulnerabilities`（表格）、`/api/statistics`、`/api/filter-options`、推荐和报表接口 | 同步时整表替换；`cve_epss`、`cve_public_exploit` 离线更新后直接被列表、统计和 Detail 使用。 |
+| `device_tag_rules` / `device_tags` | 规则：`tag`, `pattern`, `priority`, `enabled` / 结果：`device_name`, `tag`, `source` | `device_tag_service.seed_default_rules` 初始化；`apply_device_tag_rules` 在 Defender 同步完成后自动匹配并写回 `vulnerabilities.device_tag` 与 `device_tags` | `FilterPanel`（设备标签多选）、未来 Dashboard 分类、潜在 API 统计 | 默认包含 `panjin`、`victrex`、`txv`（保留）等规则，基于 `device_name LIKE pattern`，优先级越小越先匹配。 |
 | `rapid_vulnerabilities` | `cve_id`, `device_count`, `max_severity`, `source_*` 列 | `sync_threat_sources` 中 `_sync_source`（Metasploit 数据） | 计划用于情报面板/重叠统计 | 同步开始前 `TRUNCATE`，再批量插入。 |
 | `nuclei_vulnerabilities` | 同上 | 同上（Nuclei GitHub feed） | 同上 | 同上。 |
 | `recordfuture_indicators` | `indicator_type` (`ip`/`cve`), `indicator_value`, `metadata` | `recordfuture_service.save_indicators`（来自 `IPExtractBox` 或脚本） | `recordfuture_service._apply_recordfuture_detection_flags`（根据 `cve` 反写主表） | 只存原始指标，不直接驱动前端 UI。 |
@@ -41,7 +42,7 @@ RecordFuture 工具 --> recordfuture_indicators ---------------------+
    - 根据用户勾选过滤 registry，保持既定顺序（默认勾选 `defender_vulnerabilities`、`epss_enrichment`、`threat_feeds`、`recordfuture_flags`）。
    - 每个 runner 只负责“同步”自身数据，`sync_progress.sources` 记录 `pending/running/success/error`，任意 runner 失败都会中止后续步骤。
 3. **核心 runner（当前版本）**：
-   - `defender_vulnerabilities`: `perform_full_sync`，写 `vulnerabilities`、`sync_state`、`vulnerability_snapshots`。
+   - `defender_vulnerabilities`: `perform_full_sync`，写 `vulnerabilities`、`sync_state`、`vulnerability_snapshots`，随后 `apply_device_tag_rules()` 基于 `device_name` 自动回写 `device_tag` 列并刷新 `device_tags` 明细。
    - `epss_enrichment`: 下载官方 CSV.gz，使用 DuckDB 清洗到临时文件并批量更新 `vulnerabilities.cve_epss`。
    - `kev_enrichment`: 下载 CISA KEV JSON，解析 `cveID`，批量刷新 `vulnerabilities.cve_public_exploit`（仅存在于 KEV 的 CVE 才为 TRUE）。
    - `threat_feeds`: 调 `sync_threat_sources`，刷新 `rapid_vulnerabilities`/`nuclei_vulnerabilities` 与布尔标记。
@@ -92,7 +93,7 @@ RecordFuture 工具 --> recordfuture_indicators ---------------------+
 | --- | --- | --- | --- |
 | `components/Header/Header` | `getUniqueCveCount`, `getSeverityCounts`, `getSyncStatus`, `getSyncProgress`, `triggerSync`, `createInitialSnapshot` | 总体统计、同步状态 | Sync 按钮所在，负责轮询后台进度。 |
 | `pages/Dashboard`（及其 `EpssAnalyticsSection`, `VulnerabilityTrendCard`, `BarChart` 等） | `getStatistics`, `getSnapshotsTrend`, `getFixedVulnerabilities` | 图表、趋势、已修复列表 | 依赖缓存的 `statistics`，同步后短时间内仍可能展示旧数据。 |
-| `pages/Vulnerabilities` → `FilterPanel` | `getFilterOptions` | 枚举 `severity/status/os_platform/software_vendor` | Threat Intel 多选通过 `threat_intel` query 参数传递至后端。 |
+| `pages/Vulnerabilities` → `FilterPanel` | `getFilterOptions` | 枚举 `severity/status/os_platform/software_vendor/device_tag` | Threat Intel 多选通过 `threat_intel` query 参数传递至后端；`device_tag` 直接映射到自动标签列，用于按终端归属筛选。 |
 | `pages/Vulnerabilities` → `VulnerabilityTable` | `getVulnerabilities` | 分页表格，包含 `metasploit_detected/nuclei_detected/recordfuture_detected` | Threat Intel 栏根据布尔列渲染徽章；重新加载表格即可反映标记。 |
 | `VulnerabilityDetailDialog` | `getVulnerabilityCatalogEntry` | 聚合后的 CVSS/EPSS、Affected Devices | 明细弹窗直接读取 `vulnerabilities`（含 `cve_epss`），暂不展示 Defender Catalog 描述。 |
 | `pages/Tools` → `IPExtractBox` | `extractIPAddresses`, `saveRecordFutureIndicators` | RecordFuture 指标 | 直接驱动 `recordfuture_indicators` 和主表标记。 |

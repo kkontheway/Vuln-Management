@@ -1,9 +1,14 @@
-"""Flask application factory."""
+"""FastAPI application factory."""
 import logging
-from flask import Flask
-from flask_cors import CORS
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from config import config
-from app.routes import register_blueprints
+from app.routes import register_routers
 from database import get_db_connection
 
 # Configure logging
@@ -38,31 +43,44 @@ def initialize_app_database():
         logger.error(f"Database initialization failed: {e}")
 
 
-def create_app():
-    """Create and configure Flask application.
-    
-    Returns:
-        Flask: Configured Flask application instance
-    """
-    app = Flask(
-        __name__,
-        static_folder=config.STATIC_FOLDER,
-        static_url_path=config.STATIC_URL_PATH
-    )
-    
-    # Configure app
-    app.config['SECRET_KEY'] = config.SECRET_KEY
-    app.config['DEBUG'] = config.DEBUG
-    
-    # Enable CORS
-    CORS(app)
-    
-    # Initialize database on startup
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    """Run startup tasks for FastAPI lifespan."""
     initialize_app_database()
-    
-    # Register blueprints
-    register_blueprints(app)
-    
-    logger.info("Flask application initialized")
-    
+    yield
+
+
+def create_app() -> FastAPI:
+    """Create and configure FastAPI application."""
+    app = FastAPI(
+        title=config.APP_TITLE,
+        version=config.APP_VERSION,
+        lifespan=_lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    register_routers(app)
+
+    static_folder = config.STATIC_FOLDER
+    if os.path.isdir(static_folder):
+        app.mount(
+            "/",
+            StaticFiles(directory=static_folder, html=True),
+            name="frontend",
+        )
+    else:
+        logger.warning("Static folder %s not found, skipping mount", static_folder)
+
+    logger.info("FastAPI application initialized")
+
     return app
+
+
+app = create_app()

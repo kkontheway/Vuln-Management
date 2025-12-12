@@ -1,151 +1,153 @@
-"""Recommendation report routes."""
+"""Recommendation report routes for FastAPI."""
 import logging
-from flask import Blueprint, jsonify, request
+from typing import Dict, Optional
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 
 from app.services import recommendation_service as rec_service
 from app.services import vulnerability_service as vuln_service
+from app.utils.auth import auth_guard
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('recommendations', __name__, url_prefix='/api/recommendations')
+router = APIRouter(
+    prefix="/api/recommendations",
+    tags=["Recommendations"],
+    dependencies=[Depends(auth_guard)],
+)
 
 
-@bp.route('/check/<cve_id>', methods=['GET'])
+@router.get("/check/{cve_id}")
 def check_existing_report(cve_id: str):
     """Check if a report exists for the given CVE within the last 7 days."""
     try:
         result = rec_service.check_existing_report(cve_id)
         if result:
-            return jsonify({
-                'exists': True,
-                'report': result
-            })
-        else:
-            return jsonify({
-                'exists': False
-            })
-    except Exception as e:
-        logger.error(f"Error checking existing report: {e}")
-        return jsonify({'error': str(e)}), 500
+            return {"exists": True, "report": result}
+        return {"exists": False}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error checking existing report: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/generate', methods=['POST'])
-def generate_report():
+@router.post("/generate")
+def generate_report(payload: Dict = Body(...)):
     """Generate a recommendation report for a CVE using existing vulnerability data."""
     try:
-        data = request.json
-        cve_id = data.get('cve_id', '').strip()
-        force_generate = data.get('force', False)
+        cve_id = payload.get("cve_id", "").strip()
+        force_generate = payload.get("force", False)
 
         if not cve_id:
-            return jsonify({'error': 'CVE ID is required'}), 400
+            raise HTTPException(status_code=400, detail="CVE ID is required")
 
         if not force_generate:
             existing = rec_service.check_existing_report(cve_id)
             if existing:
-                return jsonify({
-                    'error': 'Report already exists',
-                    'exists': True,
-                    'report': existing
-                }), 409
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "error": "Report already exists",
+                        "exists": True,
+                        "report": existing,
+                    },
+                )
 
         report_content = rec_service.build_report_from_data(cve_id)
-        report_id = rec_service.save_report(cve_id, report_content, '')
+        report_id = rec_service.save_report(cve_id, report_content, "")
 
-        return jsonify({
-            'success': True,
-            'report_id': report_id,
-            'cve_id': cve_id,
-            'message': 'Report generated successfully'
-        }), 201
+        return {
+            "success": True,
+            "report_id": report_id,
+            "cve_id": cve_id,
+            "message": "Report generated successfully",
+        }
 
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error generating report: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error generating report: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/history', methods=['GET'])
-def get_report_history():
+@router.get("/history")
+def get_report_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     """Get report history."""
     try:
-        limit = int(request.args.get('limit', 50))
-        offset = int(request.args.get('offset', 0))
-        
         reports = rec_service.get_report_history(limit=limit, offset=offset)
-        
-        return jsonify({
-            'reports': reports,
-            'total': len(reports)
-        })
-    except Exception as e:
-        logger.error(f"Error getting report history: {e}")
-        return jsonify({'error': str(e)}), 500
+        return {"reports": reports, "total": len(reports)}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error getting report history: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/<int:report_id>', methods=['GET'])
-def get_report(report_id: int):
+@router.get("/{report_id}")
+def get_report(report_id: int = Path(..., ge=1)):
     """Get a specific report by ID."""
     try:
         report = rec_service.get_report_by_id(report_id)
         if not report:
-            return jsonify({'error': 'Report not found'}), 404
-        
-        return jsonify({'report': report})
-    except Exception as e:
-        logger.error(f"Error getting report: {e}")
-        return jsonify({'error': str(e)}), 500
+            raise HTTPException(status_code=404, detail="Report not found")
+        return {"report": report}
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error getting report: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/cve/<cve_id>', methods=['GET'])
+@router.get("/cve/{cve_id}")
 def get_report_by_cve(cve_id: str):
     """Get the latest report for a CVE ID."""
     try:
         report = rec_service.get_report_by_cve_id(cve_id)
         if not report:
-            return jsonify({'error': 'Report not found'}), 404
-        
-        return jsonify({'report': report})
-    except Exception as e:
-        logger.error(f"Error getting report by CVE: {e}")
-        return jsonify({'error': str(e)}), 500
+            raise HTTPException(status_code=404, detail="Report not found")
+        return {"report": report}
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error getting report by CVE: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/<int:report_id>/vulnerabilities', methods=['GET'])
-def get_cve_vulnerabilities_by_report(report_id: int):
+@router.get("/{report_id}/vulnerabilities")
+def get_cve_vulnerabilities_by_report(report_id: int = Path(..., ge=1)):
     """Get vulnerability data for a CVE ID from a report."""
     try:
-        # Get CVE from report first
         report = rec_service.get_report_by_id(report_id)
         if not report:
-            return jsonify({'error': 'Report not found'}), 404
-        cve_id = report.get('cve_id')
-        
+            raise HTTPException(status_code=404, detail="Report not found")
+        cve_id = report.get("cve_id")
         if not cve_id:
-            return jsonify({'error': 'CVE ID not found in report'}), 400
+            raise HTTPException(status_code=400, detail="CVE ID not found in report")
+
         report_data = vuln_service.get_cve_vulnerability_report_data(cve_id, device_limit=50)
         if not report_data:
-            return jsonify({'error': 'No vulnerability data found'}), 404
+            raise HTTPException(status_code=404, detail="No vulnerability data found")
+        return report_data
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error getting CVE vulnerabilities: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-        return jsonify(report_data)
-    except Exception as e:
-        logger.error(f"Error getting CVE vulnerabilities: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
 
-
-@bp.route('/cve/<cve_id>/vulnerabilities', methods=['GET'])
+@router.get("/cve/{cve_id}/vulnerabilities")
 def get_cve_vulnerabilities_by_cve(cve_id: str):
     """Get vulnerability data for a CVE ID directly."""
     try:
         if not cve_id:
-            return jsonify({'error': 'CVE ID is required'}), 400
+            raise HTTPException(status_code=400, detail="CVE ID is required")
         report_data = vuln_service.get_cve_vulnerability_report_data(cve_id, device_limit=50)
         if not report_data:
-            return jsonify({'error': 'Vulnerability data not found'}), 404
-        return jsonify(report_data)
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error getting CVE vulnerabilities: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+            raise HTTPException(status_code=404, detail="Vulnerability data not found")
+        return report_data
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error getting CVE vulnerabilities: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

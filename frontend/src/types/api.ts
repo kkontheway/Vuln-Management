@@ -38,6 +38,7 @@ export interface Vulnerability {
   recommended_security_update?: string;
   recommended_security_update_url?: string;
   recommendation_reference?: string;
+  device_tags?: string[];
 }
 
 export interface VulnerabilityDevice {
@@ -70,6 +71,7 @@ export interface VulnerabilityFilters {
   threat_intel?: string | string[];
   date_from?: string;
   date_to?: string;
+  device_tag?: string | string[];
 }
 
 // Statistics

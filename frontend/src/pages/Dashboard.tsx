@@ -5,7 +5,7 @@ import BarChart from '../components/Charts/BarChart';
 import SeverityTrendTabs from '../components/Charts/SeverityTrendTabs';
 import VulnerabilityTrendCard from '../components/Cards/VulnerabilityTrendCard';
 import FixedVulnerabilitiesTable from '../components/Tables/FixedVulnerabilitiesTable';
-import PatchThisTable from '../components/Tables/PatchThisTable';
+import PatchThisTable, { DeviceTagFilter } from '../components/Tables/PatchThisTable';
 import EpssAnalyticsSection from '../components/Cards/EpssAnalyticsSection';
 import IntelligenceFeedOverlapChart from '../components/Charts/IntelligenceFeedOverlapChart';
 import apiService from '../services/api';
@@ -45,6 +45,7 @@ const Dashboard = () => {
   const [fixedVulnerabilities, setFixedVulnerabilities] = useState<FixedVulnerability[]>([]);
   const [patchThisThirdParty, setPatchThisThirdParty] = useState<Vulnerability[]>([]);
   const [patchThisMicrosoft, setPatchThisMicrosoft] = useState<Vulnerability[]>([]);
+  const [activePatchDeviceTag, setActivePatchDeviceTag] = useState<DeviceTagFilter>('victrex');
 
   const loadData = useCallback(async () => {
     try {
@@ -118,8 +119,18 @@ const Dashboard = () => {
           />
         </div>
 
-        <PatchThisTable data={patchThisThirdParty} title="PatchThis (3rd Party)" />
-        <PatchThisTable data={patchThisMicrosoft} title="PatchThis (MS)" />
+        <PatchThisTable
+          data={patchThisThirdParty}
+          title="PatchThis (3rd Party)"
+          activeDeviceTag={activePatchDeviceTag}
+          onDeviceTagChange={setActivePatchDeviceTag}
+        />
+        <PatchThisTable
+          data={patchThisMicrosoft}
+          title="PatchThis (MS)"
+          activeDeviceTag={activePatchDeviceTag}
+          onDeviceTagChange={setActivePatchDeviceTag}
+        />
 
         <FixedVulnerabilitiesTable data={fixedVulnerabilities} limit={10} />
 

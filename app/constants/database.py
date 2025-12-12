@@ -12,6 +12,8 @@ TABLE_INTEGRATION_SECRET_VERSIONS = "integration_secret_versions"
 TABLE_RECORDFUTURE_INDICATORS = "recordfuture_indicators"
 TABLE_RAPID_VULNERABILITIES = "rapid_vulnerabilities"
 TABLE_NUCLEI_VULNERABILITIES = "nuclei_vulnerabilities"
+TABLE_DEVICE_TAG_RULES = "device_tag_rules"
+TABLE_DEVICE_TAGS = "device_tags"
 
 # Sync types
 SYNC_TYPE_FULL = "full"

@@ -1,5 +1,6 @@
-Flask==3.0.0
-Flask-CORS==4.0.0
+fastapi==0.115.2
+uvicorn[standard]==0.30.1
+pydantic==2.9.2
 mysql-connector-python==8.2.0
 python-dotenv==1.0.0
 requests==2.31.0

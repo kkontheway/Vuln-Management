@@ -1,158 +1,152 @@
-"""Vulnerability management routes."""
+"""Vulnerability management routes using FastAPI routers."""
 import logging
-from flask import Blueprint, request, jsonify
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+
 from app.services import vulnerability_service as vuln_service
+from app.utils.auth import auth_guard
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('vulnerabilities', __name__, url_prefix='/api')
+router = APIRouter(
+    prefix="/api",
+    tags=["Vulnerabilities"],
+    dependencies=[Depends(auth_guard)],
+)
 
 
-@bp.route('/vulnerabilities', methods=['GET'])
-def get_vulnerabilities():
+@router.get("/vulnerabilities")
+def get_vulnerabilities(
+    request: Request,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=500),
+    vuln_id: Optional[str] = Query(default=None, alias="id"),
+):
     """Get vulnerability list with pagination and filters."""
     try:
-        # Get query parameters
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 50))
-        vuln_id = request.args.get('id')
-        
-        # Get filter conditions
-        filters = {}
+        filters: dict[str, object] = {}
         filter_fields = [
-            'cve_id', 'device_name', 'os_platform', 'os_version',
-            'software_vendor', 'software_name', 'vulnerability_severity_level',
-            'status', 'exploitability_level', 'rbac_group_name',
-            'cve_public_exploit'
+            "cve_id",
+            "device_name",
+            "os_platform",
+            "os_version",
+            "software_vendor",
+            "software_name",
+            "vulnerability_severity_level",
+            "status",
+            "exploitability_level",
+            "rbac_group_name",
+            "cve_public_exploit",
         ]
-        
+
+        query = request.query_params
         for field in filter_fields:
-            # Handle array parameters (for multi-select like software_vendor)
-            if field == 'software_vendor':
-                values = request.args.getlist(field)
+            if field == "software_vendor":
+                values = query.getlist(field)
                 if values:
-                    filters[field] = values  # Store as list for IN query
+                    filters[field] = values
             else:
-                value = request.args.get(field)
+                value = query.get(field)
                 if value:
                     filters[field] = value
-        
-        threat_intel_values = request.args.getlist('threat_intel')
-        if threat_intel_values:
-            filters['threat_intel'] = threat_intel_values
 
-        # Add CVSS / EPSS and date filters
-        cvss_min = request.args.get('cvss_min')
-        cvss_max = request.args.get('cvss_max')
-        if cvss_min:
-            filters['cvss_min'] = cvss_min
-        if cvss_max:
-            filters['cvss_max'] = cvss_max
-        epss_min = request.args.get('epss_min')
-        epss_max = request.args.get('epss_max')
-        if epss_min:
-            filters['epss_min'] = epss_min
-        if epss_max:
-            filters['epss_max'] = epss_max
-        
-        date_from = request.args.get('date_from')
-        date_to = request.args.get('date_to')
-        if date_from:
-            filters['date_from'] = date_from
-        if date_to:
-            filters['date_to'] = date_to
-        
+        threat_intel_values = query.getlist("threat_intel")
+        if threat_intel_values:
+            filters["threat_intel"] = threat_intel_values
+
+        for name in ("cvss_min", "cvss_max", "epss_min", "epss_max", "date_from", "date_to"):
+            value = query.get(name)
+            if value:
+                filters[name] = value
+
         result = vuln_service.get_vulnerabilities(
             filters=filters if filters else None,
             page=page,
             per_page=per_page,
-            vuln_id=vuln_id if vuln_id else None
+            vuln_id=vuln_id,
         )
-        
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"获取漏洞数据时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return result
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取漏洞数据时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/patch-this', methods=['GET'])
-def get_patch_this():
+@router.get("/patch-this")
+def get_patch_this(
+    limit: Optional[int] = Query(default=None, ge=1),
+    vendor_scope: Optional[str] = Query(default=None),
+):
     """Return high-priority vulnerabilities for PatchThis widget."""
     try:
-        limit_param = request.args.get('limit')
-        limit = int(limit_param) if limit_param not in (None, '', '0') else None
-        vendor_scope = request.args.get('vendor_scope')
         data = vuln_service.get_patchthis_vulnerabilities(limit=limit, vendor_scope=vendor_scope)
-        return jsonify({'data': data})
-    except Exception as e:
-        logger.error(f"获取PatchThis数据时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return {"data": data}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取PatchThis数据时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/statistics', methods=['GET'])
+@router.get("/statistics")
 def get_statistics():
     """Get vulnerability statistics for charts."""
     try:
-        result = vuln_service.get_statistics()
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"获取统计信息时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return vuln_service.get_statistics()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取统计信息时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/unique-cve-count', methods=['GET'])
+@router.get("/unique-cve-count")
 def get_unique_cve_count():
     """Get count of unique CVE IDs."""
     try:
-        result = vuln_service.get_unique_cve_count()
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"获取去重CVE数量时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return vuln_service.get_unique_cve_count()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取去重CVE数量时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/severity-counts', methods=['GET'])
+@router.get("/severity-counts")
 def get_severity_counts():
     """Get vulnerability counts by severity level."""
     try:
-        result = vuln_service.get_severity_counts()
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"获取严重程度统计时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return vuln_service.get_severity_counts()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取严重程度统计时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/filter-options', methods=['GET'])
+@router.get("/filter-options")
 def get_filter_options():
     """Get filter option lists for dropdowns."""
     try:
-        result = vuln_service.get_filter_options()
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"获取过滤选项时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return vuln_service.get_filter_options()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取过滤选项时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/fixed-vulnerabilities', methods=['GET'])
-def get_fixed_vulnerabilities():
-    """Get list of fixed vulnerabilities (exist in snapshot but not in current vulnerabilities)."""
+@router.get("/fixed-vulnerabilities")
+def get_fixed_vulnerabilities(limit: int = Query(50, ge=1, le=500)):
+    """Get list of fixed vulnerabilities."""
     try:
-        limit = int(request.args.get('limit', 50))
         result = vuln_service.get_fixed_vulnerabilities(limit=limit)
-        return jsonify({'data': result})
-    except Exception as e:
-        logger.error(f"获取已修复漏洞列表时出错: {e}")
-        return jsonify({'error': str(e)}), 500
+        return {"data": result}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("获取已修复漏洞列表时出错: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/vulnerability-catalog/<cve_id>', methods=['GET'])
+@router.get("/vulnerability-catalog/{cve_id}")
 def get_vulnerability_catalog_entry(cve_id: str):
     """Get catalog metadata for a specific CVE."""
     try:
         result = vuln_service.get_catalog_details(cve_id)
         if not result:
-            return jsonify({'error': 'Catalog entry not found'}), 404
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching catalog entry for {cve_id}: {e}")
-        return jsonify({'error': str(e)}), 500
+            raise HTTPException(status_code=404, detail="Catalog entry not found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error fetching catalog entry for %s: %s", cve_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

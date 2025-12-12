@@ -6,7 +6,7 @@
 漏洞管理系统是一个现代化的漏洞管理平台，用于管理和分析Microsoft Defender收集的漏洞数据。系统采用前后端分离架构，提供漏洞查询、统计分析、数据同步、快照管理、ServiceNow集成、威胁情报和AI聊天等功能。
 
 ### 1.2 技术栈
-- **后端**: Flask 3.0.0 (Python)
+- **后端**: FastAPI 0.115 + Uvicorn (Python)
 - **前端**: React 18.3.1 + TypeScript + Vite
 - **数据库**: MySQL 8.0+
 - **UI框架**: Tailwind CSS + Radix UI
@@ -21,7 +21,7 @@
 └──────┬──────┘
        │ HTTP/REST API
 ┌──────▼──────┐
-│   Flask     │ 后端API服务器 (Port 5001)
+│  FastAPI    │ 后端API服务器 (Port 5001)
 │   Backend   │
 └──────┬──────┘
        │
@@ -38,8 +38,8 @@
 ### 2.1 目录结构
 ```
 VulnManagement/
-├── app/                      # Flask应用主目录
-│   ├── __init__.py          # Flask应用工厂
+├── app/                      # FastAPI应用主目录
+│   ├── __init__.py          # FastAPI应用工厂
 │   ├── routes/              # API路由模块
 │   │   ├── vulnerabilities.py    # 漏洞管理API
 │   │   ├── snapshots.py          # 快照管理API
@@ -47,7 +47,7 @@ VulnManagement/
 │   │   ├── servicenow.py         # ServiceNow集成API
 │   │   ├── threat_intelligence.py # 威胁情报API
 │   │   ├── chat.py               # AI聊天API
-│   │   └── static.py             # 静态文件服务
+│   │   └── (routers同目录结构)   # FastAPI APIRouter
 │   ├── services/            # 业务逻辑服务层
 │   │   ├── vulnerability_service.py
 │   │   ├── snapshot_service.py
@@ -73,7 +73,7 @@ VulnManagement/
 │   │   ├── types/           # TypeScript类型定义
 │   │   └── styles/          # 样式文件
 │   └── package.json
-├── app.py                   # Flask应用入口
+├── app.py                   # FastAPI应用入口（uvicorn封装）
 ├── config.py                # 配置管理
 ├── database.py              # 数据库连接
 ├── servicenow_client.py     # ServiceNow客户端
@@ -89,9 +89,9 @@ VulnManagement/
 
 ## 3. 后端文档
 
-### 3.1 Flask应用结构
-- **app/__init__.py**: Flask应用工厂，初始化应用，注册蓝图，初始化数据库
-- **app.py**: 应用入口，启动Flask服务器（端口5001）
+### 3.1 FastAPI应用结构
+- **app/__init__.py**: FastAPI应用工厂，注册APIRouter、配置中间件、初始化数据库，并将 `frontend/dist` 挂载为静态资源
+- **app.py**: 应用入口，封装 `uvicorn.run`（端口5001）
 
 ### 3.2 路由模块 (app/routes/)
 
@@ -154,6 +154,11 @@ VulnManagement/
 #### 3.3.4 threat_intelligence_service.py
 - IP地址提取和CSV生成功能
 
+#### 3.3.5 device_tag_service.py
+- 维护 `device_tag_rules` 默认规则（如 `panjin`、`victrex`、预留的 `txv`）
+- `apply_device_tag_rules()` 会在每次 Defender 全量同步后运行，将匹配结果写入 `vulnerabilities.device_tag` 与 `device_tags` 表
+- 暴露统计与选项查询，供 `get_filter_options()` 和 Dashboard 读取
+
 ### 3.4 集成模块 (app/integrations/defender/)
 
 #### 3.4.1 auth.py
@@ -183,7 +188,7 @@ VulnManagement/
 - 数据转换和格式化工具
 
 ### 3.5 配置管理
-- **config.py**: 应用配置（数据库、Flask、日志等）
+- **config.py**: 应用配置（数据库、FastAPI、日志等）
 - **app/integrations/defender/config.py**: Defender API配置
 - **app/constants/api.py**: API端点常量
 - **app/constants/database.py**: 数据库表名常量
@@ -541,6 +546,11 @@ vulnerability_snapshots (1) ──< (N) cve_device_snapshots
 - 应用启动时自动执行 `initialize_database()` 创建表结构
 - 支持数据库迁移 `migrate_database()` 处理表结构变更
 
+### 6.4 设备标签
+- `vulnerabilities.device_tag`: 由 `device_tag_rules` 匹配得到的归属标签（如 `panjin`、`victrex`），可为空。
+- `device_tag_rules`: 维护 `tag/pattern/priority/enabled`，默认包含上述规则并预留 `txv`，支持按优先级（数值越小越先匹配）执行。
+- `device_tags`: 物化后的 `device_name → tag` 映射，`apply_device_tag_rules()` 每次全量同步后重建，供前端过滤和统计读取。
+
 ## 7. 配置文档
 
 ### 7.1 环境变量配置 (.env)
@@ -558,9 +568,9 @@ DB_NAME=your_database_name
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 
-# Flask配置
+# FastAPI配置
 SECRET_KEY=your_secret_key
-FLASK_DEBUG=False
+API_DEBUG=False
 LOG_LEVEL=INFO
 ```
 
@@ -598,13 +608,15 @@ cd ..
 
 #### 5. 启动Web服务器
 ```bash
+uvicorn app:app --host 0.0.0.0 --port 5001 --reload
+# 或
 python3 app.py
 ```
 
 服务器将在 `http://localhost:5001` 启动
 
 ### 8.2 开发模式
-- Flask后端: `python3 app.py` (端口5001)
+- FastAPI后端: `uvicorn app:app --reload --port 5001`
 - React开发服务器: `cd frontend && npm run dev` (端口3000)
 
 ### 8.3 数据同步
@@ -628,7 +640,7 @@ python3 defender.py
 4. 安装依赖（见部署文档）
 
 ### 9.3 调试方法
-- 后端: Flask debug模式，查看日志
+- 后端: FastAPI + uvicorn reload 日志（`uvicorn app:app --reload`），同步完成后可执行 `SELECT device_tag, COUNT(*) FROM vulnerabilities GROUP BY device_tag` 验证标签效果
 - 前端: 浏览器开发者工具，React DevTools
 - 数据库: 直接查询MySQL数据库
 

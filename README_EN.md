@@ -10,13 +10,14 @@ A modern platform for managing and analyzing vulnerability data collected from M
 - 💬 **AI Copilot** – Built-in assistant to reason about vulnerability data.
 - 📱 **Responsive Layout** – Optimized for desktop, tablet, and mobile.
 - ⚡ **High Performance** – Stable pagination and filtering on 200k+ records.
+- 🔐 **Identity Ready** – Microsoft Entra ID integration hooks pre-wired for future rollout.
 
 ## Project Structure
 
 ```
 VulnManagement/
 ├── defender.py           # Microsoft Defender synchronization script
-├── app.py                # Flask backend entry point
+├── app.py                # FastAPI backend entry point
 ├── servicenow_client.py  # ServiceNow API client
 ├── frontend/             # React application
 │   ├── src/              # Source code
@@ -75,16 +76,18 @@ INTEGRATIONS_SECRET_KEY=base64-url-safe-32-byte-key
 ```
 > `config.py` loads these automatically and `initialize_app_database()` runs migrations on startup.
 
-### 4. Prepare and run the Flask backend
+### 4. Prepare and run the FastAPI backend
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python app.py  # foreground test
+uvicorn app:app --host 0.0.0.0 --port 5001 --reload  # dev mode
+# optional helper wrapper
+python app.py  # uses uvicorn.run for quick smoke tests
 nohup python app.py > backend.log 2>&1 &  # keep running
 ```
 - API base URL: `http://127.0.0.1:5001/api/...`
-- Inspect `tail -f backend.log` or `lsof -i :5001` for health checks.
+- Inspect `tail -f backend.log` or `lsof -i :5001`/`ps aux | grep uvicorn` for health checks.
 
 ### 5. Build the React frontend
 ```bash
@@ -92,7 +95,7 @@ cd frontend
 npm install  # first time
 npm run build
 ```
-- Output lives in `frontend/dist`; Flask serves it automatically.
+- Output lives in `frontend/dist`; FastAPI serves it automatically.
 - Or sync to `/var/www/vuln-frontend/` for Nginx-only hosting.
 
 ### 6. Configure Nginx (port 80 entry point)
@@ -233,7 +236,7 @@ def export_vulnerabilities():
 
 - **DB connection failures** – verify `.env` settings, ensure MySQL is reachable, and check firewalls.
 - **API failures** – confirm Defender credentials, network connectivity, and inspect `defender_api.log`. `/api/vulnerabilities` requires `Vulnerability.Read.All` (Application) or `Vulnerability.Read` (Delegated).
-- **Frontend not loading** – ensure Flask is running, check browser dev tools, and confirm static paths.
+- **Frontend not loading** – ensure FastAPI (uvicorn) is running, check browser dev tools, and confirm static paths.
 
 ## License
 

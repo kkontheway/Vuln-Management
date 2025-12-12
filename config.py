@@ -16,13 +16,15 @@ class Config:
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
     
-    # Flask configuration
+    # FastAPI metadata / runtime toggles
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-    DEBUG = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    DEBUG = os.getenv("API_DEBUG", "False").lower() == "true"
+    APP_TITLE = os.getenv("APP_TITLE", "Vulnerability Management API")
+    APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
     
     # Static files
-    STATIC_FOLDER = "frontend/dist"
-    STATIC_URL_PATH = ""
+    STATIC_FOLDER = os.getenv("STATIC_FOLDER", "frontend/dist")
+    STATIC_URL_PATH = os.getenv("STATIC_URL_PATH", "")
     
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -41,7 +43,15 @@ class Config:
     # Threat source enrichment files
     METASPLOIT_CVE_PATH = os.getenv("METASPLOIT_CVE_PATH", "data/metasploit.txt")
     NUCLEI_CVE_PATH = os.getenv("NUCLEI_CVE_PATH", "data/nuclei.txt")
-    
+
+    # Identity provider (Microsoft Entra ID placeholders)
+    ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
+    ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
+    ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
+    ENTRA_AUTHORITY = os.getenv("ENTRA_AUTHORITY")
+    ENTRA_API_SCOPE = os.getenv("ENTRA_API_SCOPE")
+    AUTH_PROVIDER = os.getenv("AUTH_PROVIDER", "none")
+
     @property
     def db_config(self):
         """Get database configuration dictionary."""
@@ -52,6 +62,14 @@ class Config:
             "user": self.DB_USER,
             "password": self.DB_PASSWORD,
         }
+
+    @property
+    def allowed_origins(self):
+        """Return configured CORS origins list."""
+        raw = os.getenv("ALLOWED_ORIGINS", "*")
+        if raw.strip() == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 # Global config instance

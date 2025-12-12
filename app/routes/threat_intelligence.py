@@ -1,45 +1,45 @@
 """Threat intelligence routes."""
 import logging
-from flask import Blueprint, request, jsonify
-from app.services import threat_intelligence_service as threat_svc
+from typing import List
+
+from fastapi import APIRouter, Body, Depends, HTTPException
+
 from app.services import recordfuture_service
+from app.services import threat_intelligence_service as threat_svc
+from app.utils.auth import auth_guard
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('threat_intelligence', __name__, url_prefix='/api/threat-intelligence')
+router = APIRouter(
+    prefix="/api/threat-intelligence",
+    tags=["Threat Intelligence"],
+    dependencies=[Depends(auth_guard)],
+)
 
 
-@bp.route('/extract-ip', methods=['POST'])
-def extract_ip_addresses():
+@router.post("/extract-ip")
+def extract_ip_addresses(payload: dict = Body(...)):
     """Extract IP addresses from text and generate CSV file."""
     try:
-        data = request.get_json(silent=True) or {}
-        text = data.get('text', '')
-        
-        result = threat_svc.extract_ip_addresses(text)
-        return jsonify(result)
-        
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error extracting IP addresses: {e}")
-        return jsonify({'error': str(e)}), 500
+        text = payload.get("text", "")
+        return threat_svc.extract_ip_addresses(text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error extracting IP addresses: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@bp.route('/recordfuture/save', methods=['POST'])
-def save_recordfuture_indicators():
+@router.post("/recordfuture/save")
+def save_recordfuture_indicators(payload: dict = Body(...)):
     """Persist extracted indicators upon user confirmation."""
     try:
-        data = request.get_json(silent=True) or {}
-        ips = data.get('ips', [])
-        cves = data.get('cves', [])
-        source_text = data.get('sourceText', '')
-
-        result = recordfuture_service.save_indicators(ips, cves, source_text)
-        return jsonify(result)
-
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error saving RecordFuture indicators: {e}")
-        return jsonify({'error': 'Failed to save indicators'}), 500
+        ips: List[str] = payload.get("ips", [])
+        cves: List[str] = payload.get("cves", [])
+        source_text = payload.get("sourceText", "")
+        return recordfuture_service.save_indicators(ips, cves, source_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error saving RecordFuture indicators: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to save indicators") from exc

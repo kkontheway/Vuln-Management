@@ -14,6 +14,7 @@ export interface FilterState {
   kev: 'all' | 'true' | 'false';
   vendors: string[];
   threatIntel: string[];
+  deviceTags: string[];
 }
 
 export const EPSS_BUCKET_RANGES: Record<Exclude<EpssBucket, 'all'>, { min: string; max: string }> = {
@@ -35,6 +36,7 @@ export const createDefaultFilterState = (): FilterState => ({
   kev: 'all',
   vendors: [],
   threatIntel: [],
+  deviceTags: [],
 });
 
 export const serializeFilters = (state: FilterState): VulnerabilityFilters => {
@@ -77,6 +79,9 @@ export const serializeFilters = (state: FilterState): VulnerabilityFilters => {
   }
   if (state.threatIntel.length > 0) {
     payload.threat_intel = state.threatIntel;
+  }
+  if (state.deviceTags.length > 0) {
+    payload.device_tag = state.deviceTags;
   }
 
   return payload;

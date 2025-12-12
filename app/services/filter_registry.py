@@ -17,6 +17,7 @@ FILTER_FIELD_DEFINITIONS: Dict[str, Dict[str, str]] = {
     "rbac_group_name": {"column": "rbac_group_name", "strategy": "equals"},
     "software_vendor": {"column": "software_vendor", "strategy": "in"},
     "cve_public_exploit": {"column": "cve_public_exploit", "strategy": "boolean"},
+    "device_tag": {"column": "device_tag", "strategy": "in"},
 }
 
 # Numeric range filters
